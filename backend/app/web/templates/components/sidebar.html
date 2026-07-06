@@ -112,6 +112,8 @@
             <span>Consumo IA</span>
         </a>
 
+        <!-- Solo mostrar Auth para usuarios admin -->
+        {% if request.state.user and request.state.user.role and request.state.user.role.name.lower() == 'admin' %}
         <a
             href="/auth"
             class="flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-gray-100 transition-colors"
@@ -121,6 +123,7 @@
             </svg>
             <span>Auth</span>
         </a>
+        {% endif %}
 
     </nav>
 

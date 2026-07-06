@@ -18,6 +18,9 @@ from app.models.permission import Permission
 
 from app.services.auth_service import authenticate_user
 from app.core.security import create_access_token
+from app.services.user_service import create_user, delete_user
+from app.schemas.user import UserCreate
+from app.web.utils.flash import set_flash
 
 router = APIRouter()
 
@@ -43,6 +46,12 @@ async def auth_page(
     request: Request,
     db: Session = Depends(get_db)
 ):
+    from app.web.dependencies.auth import require_admin_role
+
+    # Validar que solo admin pueda acceder
+    admin_user = require_admin_role(request, db)
+    if isinstance(admin_user, RedirectResponse):
+        return admin_user
 
     users = db.query(User).all()
 
@@ -50,7 +59,7 @@ async def auth_page(
 
     permissions = db.query(Permission).all()
 
-    current_user = request.state.user 
+    current_user = request.state.user
 
     return templates.TemplateResponse(
         request=request,
@@ -131,5 +140,70 @@ async def logout():
     )
 
     response.delete_cookie("access_token")
+
+    return response
+
+
+@router.post("/auth/users/create")
+async def create_user_endpoint(
+    request: Request,
+    email: str = Form(...),
+    full_name: str = Form(...),
+    password: str = Form(...),
+    role_id: int = Form(...),
+    db: Session = Depends(get_db)
+):
+    from app.web.dependencies.auth import require_admin_role
+
+    # Validar que solo admin pueda crear usuarios
+    admin_user = require_admin_role(request, db)
+    if isinstance(admin_user, RedirectResponse):
+        return admin_user
+
+    response = RedirectResponse(url="/auth", status_code=303)
+
+    try:
+        user_data = UserCreate(
+            email=email,
+            full_name=full_name,
+            password=password,
+            role_id=role_id
+        )
+
+        create_user(db, user_data)
+        set_flash(response, "success", "Usuario creado correctamente")
+
+    except HTTPException as e:
+        set_flash(response, "error", e.detail)
+
+    return response
+
+
+@router.post("/auth/users/delete/{user_id}")
+async def delete_user_endpoint(
+    request: Request,
+    user_id: int,
+    db: Session = Depends(get_db)
+):
+    from app.web.dependencies.auth import require_admin_role
+
+    # Validar que solo admin pueda eliminar usuarios
+    admin_user = require_admin_role(request, db)
+    if isinstance(admin_user, RedirectResponse):
+        return admin_user
+
+    response = RedirectResponse(url="/auth", status_code=303)
+
+    try:
+        # No permitir que el admin se elimine a sí mismo
+        if admin_user.id == user_id:
+            set_flash(response, "error", "No puedes eliminar tu propio usuario")
+            return response
+
+        delete_user(db, user_id)
+        set_flash(response, "success", "Usuario eliminado correctamente")
+
+    except HTTPException as e:
+        set_flash(response, "error", e.detail)
 
     return response

@@ -45,3 +45,25 @@ def get_current_web_user(
         return RedirectResponse(url="/", status_code=302)
 
     return user
+
+
+def require_admin_role(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Valida que el usuario tenga rol de admin (asumiendo role.name = 'Admin')"""
+    from app.web.utils.flash import set_flash
+
+    user = get_current_web_user(request, db)
+
+    # Si get_current_web_user retorna RedirectResponse, propagarlo
+    if isinstance(user, RedirectResponse):
+        return user
+
+    # Validar que el usuario tenga rol admin
+    if not user.role or user.role.name.lower() != 'admin':
+        response = RedirectResponse(url="/dashboard", status_code=303)
+        set_flash(response, "error", "Acceso denegado. Solo administradores pueden acceder a esta sección.")
+        return response
+
+    return user

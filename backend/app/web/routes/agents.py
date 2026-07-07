@@ -21,6 +21,8 @@ from app.db.deps import get_db
 from app.models.agent import Agent
 from app.models.property import Property
 
+from app.web.dependencies.auth import is_admin, get_agent_from_user
+
 
 router = APIRouter()
 
@@ -36,9 +38,15 @@ async def agents_page(
 ):
     error = request.query_params.get("error")
 
-    agents = db.query(Agent).all()
-
     current_user = request.state.user
+
+    # Si es admin, mostrar todos los agentes
+    # Si es agente, mostrar solo su propio perfil
+    if is_admin(current_user):
+        agents = db.query(Agent).all()
+    else:
+        agent = get_agent_from_user(current_user, db)
+        agents = [agent] if agent else []
 
     return templates.TemplateResponse(
         request=request,

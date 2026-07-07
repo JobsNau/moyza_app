@@ -11,6 +11,7 @@ from app.db.deps import get_db
 from app.core.security import decode_token
 
 from app.models.user import User
+from app.models.agent import Agent
 
 
 def get_current_web_user(
@@ -62,8 +63,22 @@ def require_admin_role(
 
     # Validar que el usuario tenga rol admin
     if not user.role or user.role.name.lower() != 'admin':
-        response = RedirectResponse(url="/dashboard", status_code=303)
+        response = RedirectResponse(url="/clients", status_code=303)
         set_flash(response, "error", "Acceso denegado. Solo administradores pueden acceder a esta sección.")
         return response
 
     return user
+
+
+def get_agent_from_user(user: User, db: Session):
+    """Obtiene el Agent asociado al usuario por email. Retorna None si no existe."""
+    if not user:
+        return None
+
+    agent = db.query(Agent).filter(Agent.email == user.email).first()
+    return agent
+
+
+def is_admin(user: User) -> bool:
+    """Verifica si el usuario tiene rol de admin"""
+    return user and user.role and user.role.name.lower() == 'admin'

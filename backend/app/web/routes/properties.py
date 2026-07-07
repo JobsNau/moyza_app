@@ -33,6 +33,7 @@ from pathlib import Path
 from app.services.property_metrics import PropertyMetricsService
 from app.services.report_generator import generate_property_report
 from app.web.utils.flash import set_flash
+from app.web.dependencies.auth import is_admin, get_agent_from_user
 
 
 router = APIRouter()
@@ -48,22 +49,34 @@ async def properties_page(
     db: Session = Depends(get_db)
 ):
 
-    properties = db.query(Property).filter(Property.status != PropertyStatus.ARCHIVED).all()
+    current_user = request.state.user
+
+    # Si es admin, mostrar todas las propiedades
+    # Si es agente, mostrar solo sus propiedades
+    base_query = db.query(Property).filter(Property.status != PropertyStatus.ARCHIVED)
+
+    if not is_admin(current_user):
+        agent = get_agent_from_user(current_user, db)
+        if agent:
+            base_query = base_query.filter(Property.agent_id == agent.id)
+        else:
+            # Si no es admin y no tiene agente asociado, no mostrar nada
+            base_query = base_query.filter(Property.id == -1)
+
+    properties = base_query.all()
 
     clients = db.query(Client).all()
 
     agents = db.query(Agent).all()
 
-    current_user = request.state.user
-
-    active_count = db.query(Property).filter(Property.status == PropertyStatus.ACTIVE).count()
-    paused_count = db.query(Property).filter(Property.status == PropertyStatus.PAUSED).count()
-    sold_count = db.query(Property).filter(Property.status == PropertyStatus.SOLD).count()
+    active_count = base_query.filter(Property.status == PropertyStatus.ACTIVE).count()
+    paused_count = base_query.filter(Property.status == PropertyStatus.PAUSED).count()
+    sold_count = base_query.filter(Property.status == PropertyStatus.SOLD).count()
 
     search = request.query_params.get("search")
 
     if search:
-        properties = db.query(Property).filter(Property.title.contains(search)).all()
+        properties = base_query.filter(Property.title.contains(search)).all()
 
     return templates.TemplateResponse(
         request=request,

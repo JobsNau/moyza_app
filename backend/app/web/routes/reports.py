@@ -27,6 +27,7 @@ from app.models.report import Report
 from app.models.property import Property
 from app.services.whatsapp import send_report
 from app.web.utils.flash import set_flash
+from app.web.dependencies.auth import is_admin, get_agent_from_user
 
 
 router = APIRouter()
@@ -42,11 +43,22 @@ async def reports_page(
     db: Session = Depends(get_db)
 ):
 
-    reports = db.query(Report).all()
-
-    properties = db.query(Property).all()
-
     current_user = request.state.user
+
+    # Si es admin, mostrar todos los informes y propiedades
+    # Si es agente, mostrar solo informes de sus propiedades
+    if is_admin(current_user):
+        reports = db.query(Report).all()
+        properties = db.query(Property).all()
+    else:
+        agent = get_agent_from_user(current_user, db)
+        if agent:
+            # Filtrar informes por propiedades del agente
+            reports = db.query(Report).join(Property).filter(Property.agent_id == agent.id).all()
+            properties = db.query(Property).filter(Property.agent_id == agent.id).all()
+        else:
+            reports = []
+            properties = []
 
     return templates.TemplateResponse(
         request=request,

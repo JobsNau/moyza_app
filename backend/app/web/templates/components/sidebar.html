@@ -32,6 +32,8 @@
 
     <nav class="mt-4">
 
+        <!-- Dashboard - Solo para Admin -->
+        {% if request.state.user and request.state.user.role and request.state.user.role.name.lower() == 'admin' %}
         <a
             href="/dashboard"
             class="flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-gray-100 transition-colors"
@@ -41,6 +43,7 @@
             </svg>
             <span>Dashboard</span>
         </a>
+        {% endif %}
 
         <a
             href="/clients"
@@ -92,6 +95,8 @@
             <span>Informes</span>
         </a>
 
+        <!-- Logs de Reportes - Solo para Admin -->
+        {% if request.state.user and request.state.user.role and request.state.user.role.name.lower() == 'admin' %}
         <a
             href="/report-logs"
             class="flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-gray-100 transition-colors"
@@ -101,7 +106,10 @@
             </svg>
             <span>Logs de Reportes</span>
         </a>
+        {% endif %}
 
+        <!-- Consumo IA - Solo para Admin -->
+        {% if request.state.user and request.state.user.role and request.state.user.role.name.lower() == 'admin' %}
         <a
             href="/ai-logs-dashboard"
             class="flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-gray-100 transition-colors"
@@ -111,7 +119,10 @@
             </svg>
             <span>Consumo IA</span>
         </a>
+        {% endif %}
 
+        <!-- Solo mostrar Auth para usuarios admin -->
+        {% if request.state.user and request.state.user.role and request.state.user.role.name.lower() == 'admin' %}
         <a
             href="/auth"
             class="flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-gray-100 transition-colors"
@@ -121,6 +132,7 @@
             </svg>
             <span>Auth</span>
         </a>
+        {% endif %}
 
     </nav>
 

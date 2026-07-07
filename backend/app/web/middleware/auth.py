@@ -3,6 +3,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.responses import RedirectResponse
 
 from sqlalchemy.orm import Session
+from sqlalchemy.orm import joinedload
 
 from app.core.security import decode_token
 from app.db.session import SessionLocal
@@ -72,7 +73,9 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
         try:
 
-            user = db.query(User).filter(
+            user = db.query(User).options(
+                joinedload(User.role)
+            ).filter(
                 User.email == email
             ).first()
 

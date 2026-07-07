@@ -21,6 +21,7 @@ from app.services.visit_sheet_generator import generate_visit_sheet
 from app.services.whatsapp import send_report
 from app.core.config import settings
 from app.web.utils.flash import set_flash
+from app.web.dependencies.auth import is_admin, get_agent_from_user
 
 
 router = APIRouter()
@@ -36,13 +37,22 @@ async def visits_page(
     request: Request,
     db: Session = Depends(get_db)
 ):
-    visits = (
-        db.query(PropertyVisit)
-        .order_by(PropertyVisit.created_at.desc())
-        .all()
-    )
-
     current_user = request.state.user
+
+    # Si es admin, mostrar todas las visitas
+    # Si es agente, mostrar solo visitas de sus propiedades
+    visits_query = db.query(PropertyVisit)
+
+    if not is_admin(current_user):
+        agent = get_agent_from_user(current_user, db)
+        if agent:
+            # Filtrar visitas por propiedades del agente
+            visits_query = visits_query.join(Property).filter(Property.agent_id == agent.id)
+        else:
+            # Si no tiene agente, no mostrar nada
+            visits_query = visits_query.filter(PropertyVisit.id == -1)
+
+    visits = visits_query.order_by(PropertyVisit.created_at.desc()).all()
 
     return templates.TemplateResponse(
         request=request,
@@ -62,12 +72,19 @@ async def select_property(
 ):
     from app.core.constants import PropertyStatus
 
-    properties = (
-        db.query(Property)
-        .filter(Property.status != PropertyStatus.ARCHIVED)
-        .order_by(Property.title)
-        .all()
-    )
+    current_user = request.state.user
+
+    properties_query = db.query(Property).filter(Property.status != PropertyStatus.ARCHIVED)
+
+    # Si no es admin, filtrar solo sus propiedades
+    if not is_admin(current_user):
+        agent = get_agent_from_user(current_user, db)
+        if agent:
+            properties_query = properties_query.filter(Property.agent_id == agent.id)
+        else:
+            properties_query = properties_query.filter(Property.id == -1)
+
+    properties = properties_query.order_by(Property.title).all()
 
     return templates.TemplateResponse(
         request=request,
@@ -75,7 +92,7 @@ async def select_property(
         context={
             "request": request,
             "properties": properties,
-            "current_user": request.state.user
+            "current_user": current_user
         }
     )
 

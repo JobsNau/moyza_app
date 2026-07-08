@@ -86,6 +86,17 @@
         </a>
 
         <a
+            href="/alerts"
+            class="flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-gray-100 transition-colors relative"
+        >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+            </svg>
+            <span>Alertas</span>
+            <span id="alertsBadge" class="hidden ml-auto bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full"></span>
+        </a>
+
+        <a
             href="/reports"
             class="flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-gray-100 transition-colors"
         >
@@ -118,6 +129,19 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
             </svg>
             <span>Consumo IA</span>
+        </a>
+        {% endif %}
+
+        <!-- Dashboard Alertas - Solo para Admin -->
+        {% if request.state.user and request.state.user.role and request.state.user.role.name.lower() == 'admin' %}
+        <a
+            href="/alerts-dashboard"
+            class="flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-gray-100 transition-colors"
+        >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+            </svg>
+            <span>Dashboard Alertas</span>
         </a>
         {% endif %}
 
@@ -154,5 +178,29 @@ if (window.innerWidth < 1024) {
             toggleSidebar();
         });
     });
+}
+
+// Actualizar contador de alertas no leídas
+async function updateAlertsBadge() {
+    try {
+        const response = await fetch('/api/alerts/unread-count');
+        const data = await response.json();
+        const badge = document.getElementById('alertsBadge');
+
+        if (data.unread_count > 0) {
+            badge.textContent = data.unread_count;
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+    } catch (error) {
+        console.error('Error al obtener contador de alertas:', error);
+    }
+}
+
+// Actualizar badge al cargar y cada 2 minutos
+if (document.getElementById('alertsBadge')) {
+    updateAlertsBadge();
+    setInterval(updateAlertsBadge, 120000); // 2 minutos
 }
 </script>

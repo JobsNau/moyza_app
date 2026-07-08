@@ -67,3 +67,89 @@ class ReportType:
     @classmethod
     def is_valid_upload(cls, value: str) -> bool:
         return value in cls.upload_values()
+
+
+class AlertType:
+    LEAD_INTERES = "LEAD_INTERES"
+    CAMBIO_PRECIO = "CAMBIO_PRECIO"
+    VISITA_SOLICITADA = "VISITA_SOLICITADA"
+    OTRO = "OTRO"
+
+    @classmethod
+    def values(cls):
+        return {
+            cls.LEAD_INTERES,
+            cls.CAMBIO_PRECIO,
+            cls.VISITA_SOLICITADA,
+            cls.OTRO,
+        }
+
+    @classmethod
+    def is_valid(cls, value: str) -> bool:
+        return value in cls.values()
+
+
+class AlertPriority:
+    ALTA = "ALTA"
+    NORMAL = "NORMAL"
+    BAJA = "BAJA"
+
+    @classmethod
+    def values(cls):
+        return {
+            cls.ALTA,
+            cls.NORMAL,
+            cls.BAJA,
+        }
+
+    @classmethod
+    def is_valid(cls, value: str) -> bool:
+        return value in cls.values()
+
+
+class AlertStatus:
+    PENDING = "PENDING"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+
+    @classmethod
+    def values(cls):
+        return {
+            cls.PENDING,
+            cls.IN_PROGRESS,
+            cls.COMPLETED,
+            cls.CANCELLED,
+        }
+
+    @classmethod
+    def is_valid(cls, value: str) -> bool:
+        return value in cls.values()
+
+
+class FollowUpActionType:
+    LLAMADA = "LLAMADA"
+    VISITA_PROGRAMADA = "VISITA_PROGRAMADA"
+    EMAIL_ENVIADO = "EMAIL_ENVIADO"
+    OFERTA_RECIBIDA = "OFERTA_RECIBIDA"
+    CAMBIO_PRECIO = "CAMBIO_PRECIO"
+    SIN_INTERES = "SIN_INTERES"
+    NEGOCIACION = "NEGOCIACION"
+    OTRO = "OTRO"
+
+    @classmethod
+    def values(cls):
+        return {
+            cls.LLAMADA,
+            cls.VISITA_PROGRAMADA,
+            cls.EMAIL_ENVIADO,
+            cls.OFERTA_RECIBIDA,
+            cls.CAMBIO_PRECIO,
+            cls.SIN_INTERES,
+            cls.NEGOCIACION,
+            cls.OTRO,
+        }
+
+    @classmethod
+    def is_valid(cls, value: str) -> bool:
+        return value in cls.values()

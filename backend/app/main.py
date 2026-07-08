@@ -9,7 +9,7 @@ from app.core.logging_config import setup_logging
 from app.db.base import Base
 from app.db.session import engine
 from app.api.v1.router import api_router
-from app.web.routes import dashboard, clients, agents, auth, properties, reports, report_logs, ai_logs, visits
+from app.web.routes import dashboard, clients, agents, auth, properties, reports, report_logs, ai_logs, visits, alerts
 from app.web.middleware.auth import AuthMiddleware
 from app.web.middleware.flash import FlashMiddleware
 from app.jobs.scheduler import start_scheduler, shutdown_scheduler
@@ -51,6 +51,7 @@ app.include_router(visits.router)
 app.include_router(reports.router)
 app.include_router(report_logs.router)
 app.include_router(ai_logs.router)
+app.include_router(alerts.router)
 
 
 @app.get("/")

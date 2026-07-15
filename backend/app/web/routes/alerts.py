@@ -15,7 +15,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from sqlalchemy import func, case
 
-from app.core.constants import AlertType
+from app.core.constants import AlertType, PropertyStatus
 from app.core.constants import AlertPriority
 from app.core.constants import AlertStatus
 from app.core.constants import FollowUpActionType
@@ -80,7 +80,7 @@ async def alerts_page(
     properties = []
     agents = []
     if is_admin(current_user):
-        properties = db.query(Property).all()
+        properties = db.query(Property).filter(Property.status != PropertyStatus.ARCHIVED)
         agents = db.query(Agent).all()
 
     return templates.TemplateResponse(

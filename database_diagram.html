@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moyza App - Diagrama de Base de Datos Interactivo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            max-width: 100%;
+            height: calc(100vh - 40px);
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .controls {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 5px;
+            font-size: 13px;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn, .action-btn {
+            padding: 6px 14px;
+            border: 2px solid #dee2e6;
+            background: white;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+
+        .filter-btn:hover, .action-btn:hover {
+            background: #f8f9fa;
+        }
+
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .action-btn.active {
+            background: #28a745;
+            color: white;
+            border-color: #28a745;
+        }
+
+        .zoom-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .diagram-wrapper {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+            background: #f8f9fa;
+        }
+
+        .diagram-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            overflow: auto;
+        }
+
+        .diagram-canvas {
+            position: relative;
+            width: 4000px;
+            height: 3000px;
+        }
+
+        svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .table {
+            position: absolute;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+            cursor: move;
+            z-index: 10;
+            min-width: 320px;
+            max-width: 380px;
+            transition: box-shadow 0.3s;
+        }
+
+        .table:hover {
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+        }
+
+        .table.dragging {
+            opacity: 0.8;
+            z-index: 1000;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .table.highlighted {
+            box-shadow: 0 0 0 4px #667eea;
+        }
+
+        .table.dimmed {
+            opacity: 0.3;
+        }
+
+        .table-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 15px;
+            font-weight: bold;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: move;
+        }
+
+        .table-body {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .field {
+            padding: 8px 15px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .field:last-child {
+            border-bottom: none;
+        }
+
+        .field-icon {
+            font-size: 14px;
+            min-width: 18px;
+        }
+
+        .field-name {
+            flex: 1;
+            font-weight: 500;
+            color: #333;
+            font-size: 12px;
+        }
+
+        .field-type {
+            color: #666;
+            font-size: 10px;
+            background: #f0f0f0;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+
+        .pk {
+            background: #ffd700;
+            color: #333;
+        }
+
+        .fk {
+            background: #90ee90;
+            color: #333;
+        }
+
+        .relationships {
+            padding: 10px 15px;
+            background: #f8f9fa;
+            border-top: 2px solid #dee2e6;
+            font-size: 11px;
+        }
+
+        .relationships-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #667eea;
+        }
+
+        .relationship {
+            padding: 3px 0;
+            color: #555;
+        }
+
+        .legend {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 100;
+            font-size: 12px;
+        }
+
+        .legend-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .legend-line {
+            width: 30px;
+            height: 2px;
+        }
+
+        .rel-one-to-many {
+            stroke: #667eea;
+            stroke-width: 2;
+            fill: none;
+            marker-end: url(#arrowhead-one-many);
+        }
+
+        .rel-many-to-many {
+            stroke: #e74c3c;
+            stroke-width: 2;
+            fill: none;
+            stroke-dasharray: 5, 5;
+            marker-end: url(#arrowhead-many-many);
+        }
+
+        .rel-many-to-one {
+            stroke: #27ae60;
+            stroke-width: 2;
+            fill: none;
+            marker-end: url(#arrowhead-many-one);
+        }
+
+        .relation-label {
+            font-size: 10px;
+            fill: #333;
+            background: white;
+            padding: 2px 4px;
+            pointer-events: none;
+        }
+
+        .stats {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 100;
+            font-size: 12px;
+        }
+
+        .stat-row {
+            display: flex;
+            gap: 15px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 10px;
+            color: #666;
+        }
+
+        .minimap {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 200px;
+            height: 150px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 100;
+            overflow: hidden;
+            border: 2px solid #667eea;
+        }
+
+        .minimap-canvas {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Moyza App - Diagrama de Base de Datos</h1>
+            <p>Arrastra las tablas, haz zoom y explora las relaciones</p>
+        </div>
+
+        <div class="controls">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="🔍 Buscar tabla o campo...">
+            </div>
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-filter="all">Todas</button>
+                <button class="filter-btn" data-filter="core">Core</button>
+                <button class="filter-btn" data-filter="property">Propiedades</button>
+                <button class="filter-btn" data-filter="users">Usuarios</button>
+                <button class="filter-btn" data-filter="audit">Auditoría</button>
+            </div>
+            <button class="action-btn" id="toggleRelations">🔗 Relaciones</button>
+            <button class="action-btn" onclick="autoLayout()">📐 Auto Layout</button>
+            <div class="zoom-controls">
+                <button class="filter-btn" onclick="adjustZoom(0.9)">−</button>
+                <button class="filter-btn" onclick="adjustZoom(1.1)">+</button>
+                <button class="filter-btn" onclick="resetZoom()">↻</button>
+            </div>
+        </div>
+
+        <div class="diagram-wrapper">
+            <div class="diagram-container" id="diagramContainer">
+                <div class="diagram-canvas" id="diagramCanvas">
+                    <svg id="relationsSvg"></svg>
+                    <div id="tablesContainer"></div>
+                </div>
+            </div>
+
+            <div class="legend">
+                <div class="legend-title">Leyenda de Relaciones</div>
+                <div class="legend-item">
+                    <svg width="30" height="10">
+                        <line x1="0" y1="5" x2="30" y2="5" class="rel-one-to-many"/>
+                    </svg>
+                    <span>1:N (Uno a muchos)</span>
+                </div>
+                <div class="legend-item">
+                    <svg width="30" height="10">
+                        <line x1="0" y1="5" x2="30" y2="5" class="rel-many-to-one"/>
+                    </svg>
+                    <span>N:1 (Muchos a uno)</span>
+                </div>
+                <div class="legend-item">
+                    <svg width="30" height="10">
+                        <line x1="0" y1="5" x2="30" y2="5" class="rel-many-to-many"/>
+                    </svg>
+                    <span>N:N (Muchos a muchos)</span>
+                </div>
+                <div class="legend-item">
+                    <div style="width:20px; height:12px; background:#ffd700; border-radius:3px;"></div>
+                    <span>Primary Key</span>
+                </div>
+                <div class="legend-item">
+                    <div style="width:20px; height:12px; background:#90ee90; border-radius:3px;"></div>
+                    <span>Foreign Key</span>
+                </div>
+            </div>
+
+            <div class="stats">
+                <div class="stat-row">
+                    <div class="stat-item">
+                        <div class="stat-value">18</div>
+                        <div class="stat-label">Tablas</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="relationsCount">0</div>
+                        <div class="stat-label">Relaciones</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const tables = [
+            {
+                name: 'users',
+                category: 'users',
+                icon: '👤',
+                description: 'Usuarios del sistema',
+                fields: [
+                    { name: 'id', type: 'Integer', pk: true },
+                    { name: 'email', type: 'String', unique: true },
+                    { name: 'full_name', type: 'String' },
+                    { name: 'hashed_password', type: 'String' },
+                    { name: 'is_active', type: 'Boolean' },
+                    { name: 'role_id', type: 'Integer', fk: 'roles.id' }
+                ],
+                relationships: [
+                    { type: '1:N', target: 'reports', field: 'uploaded_by' },
+                    { type: '1:N', target: 'property_interactions', field: 'created_by' },
+                    { type: 'N:1', target: 'roles', field: 'role_id' }
+                ],
+                position: { x: 100, y: 100 }
+            },
+            {
+                name: 'roles',
+                category: 'users',
+                icon: '🎭',
+                description: 'Roles del sistema',
+                fields: [
+                    { name: 'id', type: 'Integer', pk: true },
+                    { name: 'name', type: 'String', unique: true }
+                ],
+                relationships: [
+                    { type: '1:N', target: 'users', field: 'role_id' },
+                    { type: 'N:N', target: 'permissions', field: 'role_permissions' }
+                ],
+                position: { x: 500, y: 100 }
+            },
+            {
+                name: 'permissions',
+                category: 'users',
+                icon: '🔐',
+                description: 'Permisos disponibles',
+                fields: [
+                    { name: 'id', type: 'Integer', pk: true },
+                    { name: 'code', type: 'String', unique: true }
+                ],
+                relationships: [
+                    { type: 'N:N', target: 'roles', field: 'role_permissions' }
+                ],
+                position: { x: 900, y: 100 }
+            },
+            {
+                name: 'role_permissions',
+                category: 'users',
+                icon: '🔄',
+                description: 'Tabla intermedia',
+                fields: [
+                    { name: 'role_id', type: 'Integer', pk: true, fk: 'roles.id' },
+                    { name: 'permission_id', type: 'Integer', pk: true, fk: 'permissions.id' }
+                ],
+                relationships: [],
+                position: { x: 700, y: 300 }
+            },
+            {
+                name: 'clients',
+                category: 'core',
+                icon: '🏢',
+                description: 'Clientes propietarios',
+                fields: [
+                    { name: 'id', type: 'Integer', pk: true },
+                    { name: 'name', type: 'String' },
+                    { name: 'email', type: 'String', unique: true },
+                    { name: 'phone', type: 'String' },
+                    { name: 'status', type: 'String' }
+                ],
+                relationships: [
+                    { type: '1:N', target: 'properties', field: 'client_id' }
+                ],
+                position: { x: 100, y: 500 }
+            },
+            {
+                name: 'agents',
+                category: 'core',
+                icon: '🏠',
+                description: 'Agentes inmobiliarios',
+                fields: [
+                    { name: 'id', type: 'Integer', pk: true },
+                    { name: 'name', type: 'String' },
+                    { name: 'email', type: 'String', unique: true },
+                    { name: 'dni', type: 'String' },
+                    { name: 'phone', type: 'String' },
+                    { name: 'zone', type: 'String' },
+                    { name: 'signature_filename', type: 'String' },
+                    { name: 'signature_filepath', type: 'String' }
+                ],
+                relationships: [
+                    { type: '1:N', target: 'properties', field: 'agent_id' },
+                    { type: '1:N', target: 'property_alerts', field: 'agent_id' }
+                ],
+                position: { x: 500, y: 500 }
+            },
+            {
+                name: 'properties',
+                category: 'property',
+                icon: '🏘️',
+                description: 'Propiedades',
+                fields: [
+                    { name: 'id', type: 'Integer', pk: true },
+                    { name: 'title', type: 'String' },
+                    { name: 'address', type: 'String' },
+                    { name: 'city', type: 'String' },
+                    { name: 'property_type', type: 'String' },
+                    { name: 'business_type', type: 'String' },
+                    { name: 'price', type: 'Numeric' },
+                    { name: 'status', type: 'String' },
+                    { name: 'client_id', type: 'Integer', fk: 'clients.id' },
+                    { name: 'agent_id', type: 'Integer', fk: 'agents.id' }
+                ],
+                relationships: [
+                    { type: 'N:1', target: 'clients', field: 'client_id' },
+                    { type: 'N:1', target: 'agents', field: 'agent_id' },
+                    { type: '1:N', target: 'reports', field: 'property_id' },
+                    { type: '1:N', target: 'property_interactions', field: 'property_id' },
+                    { type: '1:N', target: 'property_visits', field: 'property_id' },
+                    { type: '1:N', target: 'property_price_history', field: 'property_id' },
+                    { type: '1:N', target: 'property_status_history', field: 'property_id' },
+                    { type: '1:N', target: 'property_alerts', field: 'property_id' }
+                ],
+                position: { x: 900, y: 700 }
+            },
+            {
+                name: 'reports',
+                category: 'property',
+                icon: '📄',
+                description: 'Reportes',
+                fields: [
+                    { name: 'id', type: 'Integer', pk: true },
+                    { name: 'property_id', type: 'Integer', fk: 'properties.id' },
+                    { name: 'uploaded_by', type: 'Integer', fk: 'users.id' },
+                    { name: 'report_type', type: 'String' },
+                    { name: 'filename', type: 'String' },
+                    { name: 'created_at', type: 'DateTime' }
+                ],
+                relationships: [
+                    { type: 'N:1', target: 'properties', field: 'property_id' },
+                    { type: 'N:1', target: 'users', field: 'uploaded_by' },
+                    { type: '1:N', target: 'ai_analysis_logs', field: 'report_id' }
+                ],
+                position: { x: 1300, y: 700 }
+            },
+            {
+                name: 'property_interactions',
+                category: 'property',
+                icon: '💬',
+                description: 'Interacciones',
+                fields: [
+                    { name: 'id', type: 'Integer', pk: true },
+                    { name: 'property_id', type: 'Integer', fk: 'properties.id' },
+                    { name: 'interaction_type', type: 'String' },
+                    { name: 'contact_name', type: 'String' },
+                    { name: 'phone', type: 'String' },
+                    { name: 'created_by', type: 'Integer', fk: 'users.id' }
+                ],
+                relationships: [
+                    { type: 'N:1', target: 'properties', field: 'property_id' },
+                    { type: 'N:1', target: 'users', field: 'created_by' }
+                ],
+                position: { x: 1300, y: 1100 }
+            },
+            {
+                name: 'property_visits',
+                category: 'property',
+                icon: '👁️',
+                description: 'Visitas',
+                fields: [
+                    { name: 'id', type: 'Integer', pk: true },
+                    { name: 'property_id', type: 'Integer', fk: 'properties.id' },
+                    { name: 'visitor_name', type: 'String' },
+                    { name: 'dni', type: 'String' },
+                    { name: 'phone', type: 'String' },
+                    { name: 'interest_level', type: 'Integer' },
+                    { name: 'visit_status', type: 'String' },
+                    { name: 'created_by', type: 'Integer', fk: 'users.id' }
+                ],
+                relationships: [
+                    { type: 'N:1', target: 'properties', field: 'property_id' },
+                    { type: '1:N', target: 'visit_audit_logs', field: 'visit_id' },
+                    { type: '1:N', target: 'visit_otp_verifications', field: 'visit_id' }
+                ],
+                position: { x: 900, y: 1100 }
+            },
+            {
+                name: 'property_price_history',
+                category: 'property',
+                icon: '💰',
+                description: 'Historial precios',
+                fields: [
+                    { name: 'id', type: 'Integer', pk: true },
+                    { name: 'property_id', type: 'Integer', fk: 'properties.id' },
+                    { name: 'old_price', type: 'Float' },
+                    { name: 'new_price', type: 'Float' },
+                    { name: 'created_by', type: 'Integer', fk: 'users.id' }
+                ],
+                relationships: [
+                    { type: 'N:1', target: 'properties', field: 'property_id' }
+                ],
+                position: { x: 500, y: 900 }
+            },
+            {
+                name: 'property_status_history',
+                category: 'property',
+                icon: '📊',
+                description: 'Historial estados',
+                fields: [
+                    { name: 'id', type: 'Integer', pk: true },
+                    { name: 'property_id', type: 'Integer', fk: 'properties.id' },
+                    { name: 'old_status', type: 'String' },
+                    { name: 'new_status', type: 'String' },
+                    { name: 'changed_by', type: 'Integer', fk: 'users.id' }
+                ],
+                relationships: [
+                    { type: 'N:1', target: 'properties', field: 'property_id' }
+                ],
+                position: { x: 500, y: 1100 }
+            },
+            {
+                name: 'property_alerts',
+                category: 'property',
+                icon: '🔔',
+                description: 'Alertas',
+                fields: [
+                    { name: 'id', type: 'Integer', pk: true },
+                    { name: 'property_id', type: 'Integer', fk: 'properties.id' },
+                    { name: 'agent_id', type: 'Integer', fk: 'agents.id' },
+                    { name: 'lead_name', type: 'String' },
+                    { name: 'alert_type', type: 'String' },
+                    { name: 'status', type: 'String' },
+                    { name: 'created_by', type: 'Integer', fk: 'users.id' }
+                ],
+                relationships: [
+                    { type: 'N:1', target: 'properties', field: 'property_id' },
+                    { type: 'N:1', target: 'agents', field: 'agent_id' },
+                    { type: '1:N', target: 'alert_follow_ups', field: 'alert_id' }
+                ],
+                position: { x: 1700, y: 900 }
+            },
+            {
+                name: 'alert_follow_ups',
+                category: 'property',
+                icon: '📝',
+                description: 'Seguimientos',
+                fields: [
+                    { name: 'id', type: 'Integer', pk: true },
+                    { name: 'alert_id', type: 'Integer', fk: 'property_alerts.id' },
+                    { name: 'action_type', type: 'String' },
+                    { name: 'notes', type: 'Text' },
+                    { name: 'created_by', type: 'Integer', fk: 'users.id' }
+                ],
+                relationships: [
+                    { type: 'N:1', target: 'property_alerts', field: 'alert_id' }
+                ],
+                position: { x: 2100, y: 900 }
+            },
+            {
+                name: 'visit_audit_logs',
+                category: 'audit',
+                icon: '📋',
+                description: 'Auditoría visitas',
+                fields: [
+                    { name: 'id', type: 'Integer', pk: true },
+                    { name: 'visit_id', type: 'Integer', fk: 'property_visits.id' },
+                    { name: 'event_type', type: 'String' },
+                    { name: 'event_data', type: 'JSON' },
+                    { name: 'timestamp', type: 'DateTime' },
+                    { name: 'user_id', type: 'Integer', fk: 'users.id' }
+                ],
+                relationships: [
+                    { type: 'N:1', target: 'property_visits', field: 'visit_id' }
+                ],
+                position: { x: 900, y: 1500 }
+            },
+            {
+                name: 'visit_otp_verifications',
+                category: 'audit',
+                icon: '🔢',
+                description: 'Verificaciones OTP',
+                fields: [
+                    { name: 'id', type: 'Integer', pk: true },
+                    { name: 'visit_id', type: 'Integer', fk: 'property_visits.id' },
+                    { name: 'phone_number', type: 'String' },
+                    { name: 'otp_code', type: 'String' },
+                    { name: 'status', type: 'String' }
+                ],
+                relationships: [
+                    { type: 'N:1', target: 'property_visits', field: 'visit_id' }
+                ],
+                position: { x: 1300, y: 1500 }
+            },
+            {
+                name: 'report_job_logs',
+                category: 'audit',
+                icon: '⚙️',
+                description: 'Logs jobs reportes',
+                fields: [
+                    { name: 'id', type: 'Integer', pk: true },
+                    { name: 'property_id', type: 'Integer', fk: 'properties.id' },
+                    { name: 'report_id', type: 'Integer', fk: 'reports.id' },
+                    { name: 'status', type: 'String' },
+                    { name: 'job_run_at', type: 'DateTime' }
+                ],
+                relationships: [
+                    { type: 'N:1', target: 'properties', field: 'property_id' },
+                    { type: 'N:1', target: 'reports', field: 'report_id' }
+                ],
+                position: { x: 1700, y: 700 }
+            },
+            {
+                name: 'ai_analysis_logs',
+                category: 'audit',
+                icon: '🤖',
+                description: 'Logs análisis IA',
+                fields: [
+                    { name: 'id', type: 'Integer', pk: true },
+                    { name: 'property_id', type: 'Integer', fk: 'properties.id' },
+                    { name: 'report_id', type: 'Integer', fk: 'reports.id' },
+                    { name: 'analysis_type', type: 'String' },
+                    { name: 'model_name', type: 'String' },
+                    { name: 'total_tokens', type: 'Integer' }
+                ],
+                relationships: [
+                    { type: 'N:1', target: 'properties', field: 'property_id' },
+                    { type: 'N:1', target: 'reports', field: 'report_id' }
+                ],
+                position: { x: 1700, y: 500 }
+            }
+        ];
+
+        let currentZoom = 1;
+        let currentFilter = 'all';
+        let showRelations = true;
+        let draggedElement = null;
+        let offsetX = 0;
+        let offsetY = 0;
+
+        const svg = document.getElementById('relationsSvg');
+        const tablesContainer = document.getElementById('tablesContainer');
+        const relationsCountEl = document.getElementById('relationsCount');
+
+        // Create arrow markers
+        const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+
+        const markers = [
+            { id: 'arrowhead-one-many', color: '#667eea' },
+            { id: 'arrowhead-many-one', color: '#27ae60' },
+            { id: 'arrowhead-many-many', color: '#e74c3c' }
+        ];
+
+        markers.forEach(m => {
+            const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+            marker.setAttribute('id', m.id);
+            marker.setAttribute('markerWidth', '10');
+            marker.setAttribute('markerHeight', '10');
+            marker.setAttribute('refX', '9');
+            marker.setAttribute('refY', '3');
+            marker.setAttribute('orient', 'auto');
+            marker.setAttribute('markerUnits', 'strokeWidth');
+
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path.setAttribute('d', 'M0,0 L0,6 L9,3 z');
+            path.setAttribute('fill', m.color);
+
+            marker.appendChild(path);
+            defs.appendChild(marker);
+        });
+
+        svg.appendChild(defs);
+
+        function renderTables() {
+            tablesContainer.innerHTML = '';
+
+            const filteredTables = tables.filter(table => {
+                if (currentFilter === 'all') return true;
+                return table.category === currentFilter;
+            });
+
+            filteredTables.forEach(table => {
+                const tableEl = createTableElement(table);
+                tablesContainer.appendChild(tableEl);
+            });
+
+            drawRelations();
+        }
+
+        function createTableElement(table) {
+            const div = document.createElement('div');
+            div.className = 'table';
+            div.dataset.tableName = table.name;
+            div.style.left = table.position.x + 'px';
+            div.style.top = table.position.y + 'px';
+
+            const header = document.createElement('div');
+            header.className = 'table-header';
+            header.innerHTML = `<span>${table.icon} ${table.name}</span>`;
+
+            const body = document.createElement('div');
+            body.className = 'table-body';
+
+            table.fields.slice(0, 8).forEach(field => {
+                const fieldDiv = document.createElement('div');
+                fieldDiv.className = 'field';
+
+                let icon = '📌';
+                let typeClass = 'field-type';
+
+                if (field.pk) {
+                    icon = '🔑';
+                    typeClass += ' pk';
+                } else if (field.fk) {
+                    icon = '🔗';
+                    typeClass += ' fk';
+                }
+
+                fieldDiv.innerHTML = `
+                    <span class="field-icon">${icon}</span>
+                    <span class="field-name">${field.name}</span>
+                    <span class="${typeClass}">${field.type}</span>
+                `;
+                body.appendChild(fieldDiv);
+            });
+
+            if (table.fields.length > 8) {
+                const moreDiv = document.createElement('div');
+                moreDiv.className = 'field';
+                moreDiv.innerHTML = `<span style="color: #999; font-style: italic;">... ${table.fields.length - 8} más</span>`;
+                body.appendChild(moreDiv);
+            }
+
+            if (table.relationships.length > 0) {
+                const relDiv = document.createElement('div');
+                relDiv.className = 'relationships';
+                relDiv.innerHTML = `<div class="relationships-title">Relaciones (${table.relationships.length})</div>`;
+
+                table.relationships.forEach(rel => {
+                    const relItem = document.createElement('div');
+                    relItem.className = 'relationship';
+                    relItem.textContent = `${rel.type} → ${rel.target}`;
+                    relDiv.appendChild(relItem);
+                });
+
+                body.appendChild(relDiv);
+            }
+
+            div.appendChild(header);
+            div.appendChild(body);
+
+            // Drag functionality
+            header.addEventListener('mousedown', startDrag);
+            div.addEventListener('mousedown', (e) => {
+                if (e.target === div || e.target.closest('.table-body')) {
+                    e.stopPropagation();
+                }
+            });
+
+            return div;
+        }
+
+        function startDrag(e) {
+            draggedElement = e.target.closest('.table');
+            const rect = draggedElement.getBoundingClientRect();
+            const container = document.getElementById('diagramContainer');
+            const containerRect = container.getBoundingClientRect();
+
+            offsetX = e.clientX - rect.left + container.scrollLeft;
+            offsetY = e.clientY - rect.top + container.scrollTop;
+
+            draggedElement.classList.add('dragging');
+
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', stopDrag);
+
+            e.preventDefault();
+        }
+
+        function drag(e) {
+            if (!draggedElement) return;
+
+            const container = document.getElementById('diagramContainer');
+            const x = e.clientX - container.getBoundingClientRect().left + container.scrollLeft - offsetX;
+            const y = e.clientY - container.getBoundingClientRect().top + container.scrollTop - offsetY;
+
+            draggedElement.style.left = Math.max(0, x) + 'px';
+            draggedElement.style.top = Math.max(0, y) + 'px';
+
+            // Update table position
+            const tableName = draggedElement.dataset.tableName;
+            const table = tables.find(t => t.name === tableName);
+            if (table) {
+                table.position.x = Math.max(0, x);
+                table.position.y = Math.max(0, y);
+            }
+
+            drawRelations();
+        }
+
+        function stopDrag() {
+            if (draggedElement) {
+                draggedElement.classList.remove('dragging');
+                draggedElement = null;
+            }
+            document.removeEventListener('mousemove', drag);
+            document.removeEventListener('mouseup', stopDrag);
+        }
+
+        function drawRelations() {
+            if (!showRelations) {
+                svg.innerHTML = '';
+                svg.appendChild(defs);
+                return;
+            }
+
+            svg.innerHTML = '';
+            svg.appendChild(defs);
+
+            let relCount = 0;
+
+            tables.forEach(table => {
+                table.relationships.forEach(rel => {
+                    const sourceTable = document.querySelector(`[data-table-name="${table.name}"]`);
+                    const targetTable = document.querySelector(`[data-table-name="${rel.target}"]`);
+
+                    if (!sourceTable || !targetTable) return;
+                    if (currentFilter !== 'all') {
+                        const sourceCategory = tables.find(t => t.name === table.name)?.category;
+                        const targetCategory = tables.find(t => t.name === rel.target)?.category;
+                        if (sourceCategory !== currentFilter && targetCategory !== currentFilter) return;
+                    }
+
+                    relCount++;
+
+                    const sourceRect = sourceTable.getBoundingClientRect();
+                    const targetRect = targetTable.getBoundingClientRect();
+                    const container = document.getElementById('diagramContainer');
+                    const containerRect = container.getBoundingClientRect();
+
+                    const x1 = sourceRect.left - containerRect.left + container.scrollLeft + sourceRect.width / 2;
+                    const y1 = sourceRect.top - containerRect.top + container.scrollTop + sourceRect.height / 2;
+                    const x2 = targetRect.left - containerRect.left + container.scrollLeft + targetRect.width / 2;
+                    const y2 = targetRect.top - containerRect.top + container.scrollTop + targetRect.height / 2;
+
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+
+                    const dx = x2 - x1;
+                    const dy = y2 - y1;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    // Bezier curve for better visibility
+                    const cx = (x1 + x2) / 2 + (dy / dist) * 50;
+                    const cy = (y1 + y2) / 2 - (dx / dist) * 50;
+
+                    const d = `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`;
+                    path.setAttribute('d', d);
+
+                    let className = 'rel-one-to-many';
+                    if (rel.type === 'N:N') className = 'rel-many-to-many';
+                    else if (rel.type === 'N:1') className = 'rel-many-to-one';
+
+                    path.setAttribute('class', className);
+                    svg.appendChild(path);
+
+                    // Add label
+                    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    text.setAttribute('x', cx);
+                    text.setAttribute('y', cy - 5);
+                    text.setAttribute('class', 'relation-label');
+                    text.setAttribute('text-anchor', 'middle');
+                    text.setAttribute('font-size', '10');
+                    text.setAttribute('fill', '#666');
+                    text.textContent = rel.type;
+                    svg.appendChild(text);
+                });
+            });
+
+            relationsCountEl.textContent = relCount;
+        }
+
+        function adjustZoom(factor) {
+            currentZoom *= factor;
+            currentZoom = Math.max(0.3, Math.min(2, currentZoom));
+            const canvas = document.getElementById('diagramCanvas');
+            canvas.style.transform = `scale(${currentZoom})`;
+            canvas.style.transformOrigin = '0 0';
+        }
+
+        function resetZoom() {
+            currentZoom = 1;
+            document.getElementById('diagramCanvas').style.transform = 'scale(1)';
+        }
+
+        function autoLayout() {
+            const categories = {};
+            tables.forEach(table => {
+                if (!categories[table.category]) {
+                    categories[table.category] = [];
+                }
+                categories[table.category].push(table);
+            });
+
+            let yOffset = 100;
+            Object.keys(categories).forEach(category => {
+                const categoryTables = categories[category];
+                let xOffset = 100;
+
+                categoryTables.forEach((table, index) => {
+                    table.position.x = xOffset;
+                    table.position.y = yOffset;
+                    xOffset += 420;
+
+                    if ((index + 1) % 4 === 0) {
+                        xOffset = 100;
+                        yOffset += 450;
+                    }
+                });
+
+                yOffset += 550;
+            });
+
+            renderTables();
+        }
+
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const tableElements = document.querySelectorAll('.table');
+
+            if (!searchTerm) {
+                tableElements.forEach(el => {
+                    el.classList.remove('highlighted', 'dimmed');
+                });
+                return;
+            }
+
+            tableElements.forEach(el => {
+                const tableName = el.dataset.tableName.toLowerCase();
+                const table = tables.find(t => t.name === el.dataset.tableName);
+                const hasFieldMatch = table.fields.some(f => f.name.toLowerCase().includes(searchTerm));
+
+                if (tableName.includes(searchTerm) || hasFieldMatch) {
+                    el.classList.add('highlighted');
+                    el.classList.remove('dimmed');
+                } else {
+                    el.classList.remove('highlighted');
+                    el.classList.add('dimmed');
+                }
+            });
+        });
+
+        // Filter functionality
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (btn.dataset.filter) {
+                    document.querySelectorAll('.filter-btn[data-filter]').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentFilter = btn.dataset.filter;
+                    renderTables();
+                }
+            });
+        });
+
+        // Toggle relations
+        document.getElementById('toggleRelations').addEventListener('click', (e) => {
+            showRelations = !showRelations;
+            e.target.classList.toggle('active');
+            drawRelations();
+        });
+
+        // Redraw on scroll
+        document.getElementById('diagramContainer').addEventListener('scroll', drawRelations);
+
+        // Initialize
+        renderTables();
+        setTimeout(() => {
+            document.getElementById('toggleRelations').classList.add('active');
+        }, 100);
+    </script>
+</body>
+</html>

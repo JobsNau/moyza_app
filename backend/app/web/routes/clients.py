@@ -43,20 +43,25 @@ async def clients_page(request: Request, db: Session = Depends(get_db)):
 async def create_client(
         request: Request,
         name: str = Form(...),
-        email: str = Form(...),
         phone: str = Form(...),
+        email: str = Form(None),
         db: Session = Depends(get_db)
     ):
-    
-    existing_client = db.query(Client).filter(
-        Client.email == email
-    ).first()
 
-    if existing_client:
-        return RedirectResponse(
-            url="/clients?error=email_exists",
-            status_code=302
-        )
+    # El correo es opcional: una cadena vacía se guarda como NULL
+    email = (email or "").strip() or None
+
+    if email:
+
+        existing_client = db.query(Client).filter(
+            Client.email == email
+        ).first()
+
+        if existing_client:
+            return RedirectResponse(
+                url="/clients?error=email_exists",
+                status_code=302
+            )
 
     client = Client(
         name=name,
@@ -79,16 +84,32 @@ async def update_client(
         request: Request,
         client_id: int = Form(...),
         name: str = Form(...),
-        email: str = Form(...),
         phone: str = Form(...),
+        email: str = Form(None),
         db: Session = Depends(get_db)
     ):
+
+    # El correo es opcional: una cadena vacía se guarda como NULL
+    email = (email or "").strip() or None
 
     client = db.query(Client).filter(
         Client.id == client_id
     ).first()
 
     if client:
+
+        if email:
+
+            existing_client = db.query(Client).filter(
+                Client.email == email,
+                Client.id != client_id
+            ).first()
+
+            if existing_client:
+                return RedirectResponse(
+                    url="/clients?error=email_exists",
+                    status_code=302
+                )
 
         client.name = name
         client.email = email

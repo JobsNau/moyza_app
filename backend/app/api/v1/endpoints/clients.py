@@ -15,7 +15,7 @@ def get_db():
 
 @router.post("/", response_model=ClientResponse)
 def create(client: ClientCreate, db: Session = Depends(get_db)):
-    return create_client(db, client.name, client.phone)
+    return create_client(db, client.name, client.phone, client.email)
 
 @router.get("/", response_model=list[ClientResponse])
 def read(db: Session = Depends(get_db)):

@@ -31,12 +31,18 @@ def create_user(db: Session, user: UserCreate):
             detail="Rol no válido"
         )
 
+    # Normalizar campos opcionales: cadenas vacías se guardan como NULL
+    phone = (user.phone or "").strip() or None
+    company = (user.company or "").strip() or None
+
     # Crear usuario
     db_user = User(
         email=user.email,
         full_name=user.full_name,
         hashed_password=hash_password(user.password),
-        role_id=user.role_id
+        role_id=user.role_id,
+        phone=phone,
+        company=company
     )
 
     db.add(db_user)
@@ -52,8 +58,10 @@ def create_user(db: Session, user: UserCreate):
         if not existing_agent:
             db_agent = Agent(
                 name=user.full_name,
-                email=user.email
-                # phone, zone y company son opcionales: se completan después
+                email=user.email,
+                phone=phone,
+                company=company
+                # dni y zone son opcionales: se completan después
             )
             db.add(db_agent)
             db.commit()

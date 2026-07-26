@@ -151,6 +151,8 @@ async def create_user_endpoint(
     full_name: str = Form(...),
     password: str = Form(...),
     role_id: int = Form(...),
+    phone: str = Form(None),
+    company: str = Form(None),
     db: Session = Depends(get_db)
 ):
     from app.web.dependencies.auth import require_admin_role
@@ -167,7 +169,9 @@ async def create_user_endpoint(
             email=email,
             full_name=full_name,
             password=password,
-            role_id=role_id
+            role_id=role_id,
+            phone=phone,
+            company=company
         )
 
         create_user(db, user_data)

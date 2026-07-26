@@ -65,9 +65,13 @@ def is_alert_locked_for_user(alert: PropertyAlert, current_user, db: Session) ->
     """True si la cola secuencial impide al usuario actuar sobre esta alerta.
 
     El admin nunca está bloqueado. Un agente está bloqueado si la alerta no es
-    su alerta activa (la más antigua abierta).
+    su alerta activa (la más antigua abierta). Las alertas ya cerradas nunca se
+    consideran bloqueadas: no forman parte de la cola.
     """
     if is_admin(current_user):
+        return False
+
+    if alert.status not in OPEN_ALERT_STATUSES:
         return False
 
     agent = get_agent_from_user(current_user, db)
@@ -194,7 +198,10 @@ async def alert_detail(
             "follow_ups": follow_ups,
             "current_user": current_user,
             "alert_locked": alert_locked,
+            "is_admin": is_admin(current_user),
+            "can_complete": len(follow_ups) > 0,
             "FollowUpActionType": FollowUpActionType,
+            "follow_up_labels": FollowUpActionType.labels(),
             "AlertStatus": AlertStatus
         }
     )
@@ -205,7 +212,7 @@ async def create_alert(
     request: Request,
     property_id: int = Form(...),
     lead_name: str = Form(...),
-    lead_phone: str = Form(None),
+    lead_phone: str = Form(...),
     lead_email: str = Form(None),
     source: str = Form(None),
     alert_type: str = Form(AlertType.LEAD_INTERES),
@@ -220,6 +227,14 @@ async def create_alert(
     if not is_admin(current_user):
         response = RedirectResponse(url="/alerts", status_code=302)
         set_flash(response, "error", "Solo administradores pueden crear alertas")
+        return response
+
+    # El teléfono del interesado es obligatorio
+    lead_phone = (lead_phone or "").strip()
+
+    if not lead_phone:
+        response = RedirectResponse(url="/alerts", status_code=302)
+        set_flash(response, "error", "El teléfono del interesado es obligatorio")
         return response
 
     # Obtener la propiedad y su agente
@@ -351,6 +366,11 @@ async def add_follow_up(
         set_flash(response, "error", "Debes completar tu alerta activa antes de atender esta")
         return response
 
+    if not FollowUpActionType.is_valid(action_type):
+        response = RedirectResponse(url=f"/alerts/{alert_id}", status_code=302)
+        set_flash(response, "error", "Tipo de acción no válido")
+        return response
+
     try:
         # Parsear fecha si existe
         next_action_date_parsed = None
@@ -419,6 +439,20 @@ async def complete_alert(
         set_flash(response, "error", "Debes completar tu alerta activa antes de atender esta")
         return response
 
+    # No se puede cerrar una alerta sin al menos un seguimiento registrado
+    follow_ups_count = db.query(AlertFollowUp).filter(
+        AlertFollowUp.alert_id == alert_id
+    ).count()
+
+    if follow_ups_count == 0:
+        response = RedirectResponse(url=f"/alerts/{alert_id}", status_code=302)
+        set_flash(
+            response,
+            "error",
+            "Debes registrar al menos un seguimiento antes de cerrar la alerta"
+        )
+        return response
+
     try:
         alert.status = AlertStatus.COMPLETED
         alert.completed_at = datetime.utcnow()
@@ -434,6 +468,54 @@ async def complete_alert(
         logger.exception("Error completando alerta: alert_id=%s", alert_id)
         response = RedirectResponse(url="/alerts", status_code=302)
         set_flash(response, "error", "Ocurrió un error al completar la alerta")
+        return response
+
+
+@router.post("/alerts/{alert_id}/reactivate")
+async def reactivate_alert(
+    alert_id: int,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Reactivar una alerta cerrada o cancelada (solo admin)"""
+
+    current_user = request.state.user
+
+    if not is_admin(current_user):
+        response = RedirectResponse(url="/alerts", status_code=302)
+        set_flash(response, "error", "Solo administradores pueden reactivar alertas")
+        return response
+
+    alert = db.query(PropertyAlert).filter(PropertyAlert.id == alert_id).first()
+
+    if not alert:
+        response = RedirectResponse(url="/alerts", status_code=302)
+        set_flash(response, "error", "Alerta no encontrada")
+        return response
+
+    if alert.status in OPEN_ALERT_STATUSES:
+        response = RedirectResponse(url=f"/alerts/{alert_id}", status_code=302)
+        set_flash(response, "error", "La alerta ya está activa")
+        return response
+
+    try:
+        # Vuelve a la cola del agente como "en proceso" si ya fue leída
+        alert.status = (
+            AlertStatus.IN_PROGRESS if alert.read_at else AlertStatus.PENDING
+        )
+        alert.completed_at = None
+
+        db.commit()
+
+        response = RedirectResponse(url=f"/alerts/{alert_id}", status_code=302)
+        set_flash(response, "success", "Alerta reactivada correctamente")
+        return response
+
+    except Exception:
+        db.rollback()
+        logger.exception("Error reactivando alerta: alert_id=%s", alert_id)
+        response = RedirectResponse(url=f"/alerts/{alert_id}", status_code=302)
+        set_flash(response, "error", "Ocurrió un error al reactivar la alerta")
         return response
 
 

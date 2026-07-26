@@ -132,23 +132,28 @@ class FollowUpActionType:
     VISITA_PROGRAMADA = "VISITA_PROGRAMADA"
     EMAIL_ENVIADO = "EMAIL_ENVIADO"
     OFERTA_RECIBIDA = "OFERTA_RECIBIDA"
-    CAMBIO_PRECIO = "CAMBIO_PRECIO"
+    SIN_SOLVENCIA_ECONOMICA = "SIN_SOLVENCIA_ECONOMICA"
     SIN_INTERES = "SIN_INTERES"
     NEGOCIACION = "NEGOCIACION"
     OTRO = "OTRO"
 
     @classmethod
-    def values(cls):
+    def labels(cls):
+        """Etiquetas legibles para mostrar en formularios e historial."""
         return {
-            cls.LLAMADA,
-            cls.VISITA_PROGRAMADA,
-            cls.EMAIL_ENVIADO,
-            cls.OFERTA_RECIBIDA,
-            cls.CAMBIO_PRECIO,
-            cls.SIN_INTERES,
-            cls.NEGOCIACION,
-            cls.OTRO,
+            cls.LLAMADA: "Llamada",
+            cls.VISITA_PROGRAMADA: "Visita Programada",
+            cls.EMAIL_ENVIADO: "Email Enviado",
+            cls.OFERTA_RECIBIDA: "Oferta Recibida",
+            cls.SIN_SOLVENCIA_ECONOMICA: "Sin Solvencia Económica",
+            cls.SIN_INTERES: "Sin Interés",
+            cls.NEGOCIACION: "Negociación",
+            cls.OTRO: "Otro",
         }
+
+    @classmethod
+    def values(cls):
+        return set(cls.labels().keys())
 
     @classmethod
     def is_valid(cls, value: str) -> bool:

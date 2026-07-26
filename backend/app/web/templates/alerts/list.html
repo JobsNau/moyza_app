@@ -179,6 +179,17 @@
                                         </a>
                                         {% endif %}
 
+                                        {% if is_admin and alert.status == AlertStatus.COMPLETED %}
+                                        <form method="POST" action="/alerts/{{ alert.id }}/reactivate" onsubmit="return confirm('¿Reactivar esta alerta? Volverá a la cola del agente.');" class="inline">
+                                            <button
+                                                type="submit"
+                                                class="bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition-colors text-sm font-medium"
+                                            >
+                                                Reactivar
+                                            </button>
+                                        </form>
+                                        {% endif %}
+
                                         {% if request.state.user.role.name.lower() == 'admin' %}
                                         <form method="POST" action="/alerts/{{ alert.id }}/delete" onsubmit="return confirm('¿Estás seguro de eliminar esta alerta?');" class="inline">
                                             <button
@@ -236,8 +247,10 @@
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Teléfono</label>
-                        <input type="text" name="lead_phone" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Teléfono <span class="text-red-500">*</span>
+                        </label>
+                        <input type="tel" name="lead_phone" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>

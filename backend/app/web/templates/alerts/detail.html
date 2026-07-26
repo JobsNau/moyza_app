@@ -113,7 +113,7 @@
                         <div class="border-l-4 border-blue-500 pl-4 py-2">
                             <div class="flex items-center justify-between mb-2">
                                 <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                    {{ follow_up.action_type }}
+                                    {{ follow_up_labels.get(follow_up.action_type, follow_up.action_type) }}
                                 </span>
                                 <span class="text-sm text-gray-500">
                                     {{ follow_up.created_at.strftime('%d/%m/%Y %H:%M') if follow_up.created_at else '-' }}
@@ -226,12 +226,34 @@
                             Agregar Seguimiento
                         </button>
 
+                        {% if can_complete %}
                         <form method="POST" action="/alerts/{{ alert.id }}/complete">
                             <button type="submit" class="w-full bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium">
                                 Completar Alerta
                             </button>
                         </form>
+                        {% else %}
+                        <button
+                            type="button"
+                            disabled
+                            title="Registra al menos un seguimiento para poder cerrar la alerta"
+                            class="w-full bg-gray-200 text-gray-500 px-4 py-2 rounded-lg text-sm font-medium cursor-not-allowed"
+                        >
+                            Completar Alerta
+                        </button>
+                        <p class="text-xs text-gray-500 text-center">
+                            Debes registrar al menos un seguimiento antes de cerrar la alerta.
+                        </p>
                         {% endif %}
+                        {% endif %}
+                        {% endif %}
+
+                        {% if is_admin and alert.status == AlertStatus.COMPLETED %}
+                        <form method="POST" action="/alerts/{{ alert.id }}/reactivate" onsubmit="return confirm('¿Reactivar esta alerta? Volverá a la cola del agente.');">
+                            <button type="submit" class="w-full bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition-colors text-sm font-medium">
+                                Reactivar Alerta
+                            </button>
+                        </form>
                         {% endif %}
 
                         {% if request.state.user.role.name.lower() == 'admin' %}
@@ -264,14 +286,14 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Acción</label>
                     <select name="action_type" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                        <option value="LLAMADA">Llamada</option>
-                        <option value="VISITA_PROGRAMADA">Visita Programada</option>
-                        <option value="EMAIL_ENVIADO">Email Enviado</option>
-                        <option value="OFERTA_RECIBIDA">Oferta Recibida</option>
-                        <option value="CAMBIO_PRECIO">Cambio de Precio</option>
-                        <option value="SIN_INTERES">Sin Interés</option>
-                        <option value="NEGOCIACION">Negociación</option>
-                        <option value="OTRO">Otro</option>
+                        <option value="{{ FollowUpActionType.LLAMADA }}">{{ follow_up_labels[FollowUpActionType.LLAMADA] }}</option>
+                        <option value="{{ FollowUpActionType.VISITA_PROGRAMADA }}">{{ follow_up_labels[FollowUpActionType.VISITA_PROGRAMADA] }}</option>
+                        <option value="{{ FollowUpActionType.EMAIL_ENVIADO }}">{{ follow_up_labels[FollowUpActionType.EMAIL_ENVIADO] }}</option>
+                        <option value="{{ FollowUpActionType.OFERTA_RECIBIDA }}">{{ follow_up_labels[FollowUpActionType.OFERTA_RECIBIDA] }}</option>
+                        <option value="{{ FollowUpActionType.NEGOCIACION }}">{{ follow_up_labels[FollowUpActionType.NEGOCIACION] }}</option>
+                        <option value="{{ FollowUpActionType.SIN_SOLVENCIA_ECONOMICA }}">{{ follow_up_labels[FollowUpActionType.SIN_SOLVENCIA_ECONOMICA] }}</option>
+                        <option value="{{ FollowUpActionType.SIN_INTERES }}">{{ follow_up_labels[FollowUpActionType.SIN_INTERES] }}</option>
+                        <option value="{{ FollowUpActionType.OTRO }}">{{ follow_up_labels[FollowUpActionType.OTRO] }}</option>
                     </select>
                 </div>
 

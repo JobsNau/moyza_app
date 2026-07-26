@@ -44,7 +44,7 @@
                 </td>
 
                 <td class="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-700">
-                    {{ client.email }}
+                    {{ client.email or '—' }}
                 </td>
 
                 <td class="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-700 whitespace-nowrap">
@@ -77,8 +77,8 @@
                             onclick="editClient(
                                 '{{ client.id }}',
                                 '{{ client.name }}',
-                                '{{ client.email }}',
-                                '{{ client.phone }}'
+                                '{{ client.email or "" }}',
+                                '{{ client.phone or "" }}'
                             )"
                             class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 sm:px-4 py-2 rounded-lg text-xs sm:text-sm transition-colors inline-flex items-center"
                         >

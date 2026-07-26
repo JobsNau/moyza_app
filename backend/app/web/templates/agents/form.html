@@ -82,7 +82,7 @@
             <div class="mb-3 sm:mb-4">
 
                 <label class="block mb-1 sm:mb-2 text-xs sm:text-sm font-medium text-gray-700">
-                    Teléfono
+                    Teléfono <span class="text-gray-400 font-normal">(opcional)</span>
                 </label>
 
                 <input
@@ -97,13 +97,28 @@
             <div class="mb-3 sm:mb-4">
 
                 <label class="block mb-1 sm:mb-2 text-xs sm:text-sm font-medium text-gray-700">
-                    Zona
+                    Zona <span class="text-gray-400 font-normal">(opcional)</span>
                 </label>
 
                 <input
                     type="text"
                     id="zone"
                     name="zone"
+                    class="w-full border border-gray-300 rounded-xl p-2 sm:p-3 focus:outline-none focus:ring-2 focus:ring-gray-200 text-sm sm:text-base"
+                >
+
+            </div>
+
+            <div class="mb-3 sm:mb-4">
+
+                <label class="block mb-1 sm:mb-2 text-xs sm:text-sm font-medium text-gray-700">
+                    Empresa <span class="text-gray-400 font-normal">(opcional)</span>
+                </label>
+
+                <input
+                    type="text"
+                    id="company"
+                    name="company"
                     class="w-full border border-gray-300 rounded-xl p-2 sm:p-3 focus:outline-none focus:ring-2 focus:ring-gray-200 text-sm sm:text-base"
                 >
 
@@ -178,7 +193,7 @@ function openModal() {
 }
 
 
-function editAgent(id, name, email, dni, phone, zone, signaturePath, signatureDate) {
+function editAgent(id, name, email, dni, phone, zone, company, signaturePath, signatureDate) {
 
     openModal()
 
@@ -190,9 +205,11 @@ function editAgent(id, name, email, dni, phone, zone, signaturePath, signatureDa
 
     document.getElementById("dni").value = dni || ""
 
-    document.getElementById("phone").value = phone
+    document.getElementById("phone").value = phone || ""
 
-    document.getElementById("zone").value = zone
+    document.getElementById("zone").value = zone || ""
+
+    document.getElementById("company").value = company || ""
 
     // Mostrar firma si existe
     if (signaturePath) {

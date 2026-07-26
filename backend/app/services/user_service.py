@@ -36,7 +36,9 @@ def create_user(db: Session, user: UserCreate):
         email=user.email,
         full_name=user.full_name,
         hashed_password=hash_password(user.password),
-        role_id=user.role_id
+        role_id=user.role_id,
+        phone=user.phone,
+        company=user.company
     )
 
     db.add(db_user)
@@ -53,8 +55,9 @@ def create_user(db: Session, user: UserCreate):
             db_agent = Agent(
                 name=user.full_name,
                 email=user.email,
-                phone="",  # Se puede actualizar después
-                zone=""    # Se puede actualizar después
+                phone=user.phone,
+                company=user.company
+                # dni y zone son opcionales: se completan después
             )
             db.add(db_agent)
             db.commit()

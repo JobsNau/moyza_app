@@ -22,9 +22,11 @@ class Agent(Base):
 
     dni = Column(String, nullable=True)
 
-    phone = Column(String)
+    phone = Column(String, nullable=True)
 
-    zone = Column(String)
+    zone = Column(String, nullable=True)
+
+    company = Column(String, nullable=True)
 
     # Campos de firma digital del agente
     signature_filename = Column(

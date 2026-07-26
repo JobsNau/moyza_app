@@ -38,6 +38,45 @@ templates = Jinja2Templates(
     directory="app/web/templates"
 )
 
+# Estados que se consideran "abiertos" para la cola secuencial del agente
+OPEN_ALERT_STATUSES = [AlertStatus.PENDING, AlertStatus.IN_PROGRESS]
+
+
+def get_active_alert_id(agent_id: int, db: Session):
+    """Devuelve el id de la alerta 'activa' del agente (cola FIFO).
+
+    La activa es la alerta abierta más antigua (por fecha de creación, y en
+    empate por id). El agente solo puede trabajar/cerrar esta; el resto quedan
+    bloqueadas hasta que la cierre. Retorna None si no tiene alertas abiertas.
+    """
+    active = (
+        db.query(PropertyAlert)
+        .filter(
+            PropertyAlert.agent_id == agent_id,
+            PropertyAlert.status.in_(OPEN_ALERT_STATUSES),
+        )
+        .order_by(PropertyAlert.created_at.asc(), PropertyAlert.id.asc())
+        .first()
+    )
+    return active.id if active else None
+
+
+def is_alert_locked_for_user(alert: PropertyAlert, current_user, db: Session) -> bool:
+    """True si la cola secuencial impide al usuario actuar sobre esta alerta.
+
+    El admin nunca está bloqueado. Un agente está bloqueado si la alerta no es
+    su alerta activa (la más antigua abierta).
+    """
+    if is_admin(current_user):
+        return False
+
+    agent = get_agent_from_user(current_user, db)
+    if not agent:
+        return False
+
+    active_id = get_active_alert_id(agent.id, db)
+    return active_id is not None and alert.id != active_id
+
 
 @router.get("/alerts", response_class=HTMLResponse)
 async def alerts_page(
@@ -83,6 +122,14 @@ async def alerts_page(
         properties = db.query(Property).filter(Property.status != PropertyStatus.ARCHIVED)
         agents = db.query(Agent).all()
 
+    # Cola secuencial: para un agente, solo la alerta activa (más antigua abierta)
+    # es accionable; el resto se muestran bloqueadas. El admin no tiene cola.
+    active_alert_id = None
+    if not is_admin(current_user):
+        agent = get_agent_from_user(current_user, db)
+        if agent:
+            active_alert_id = get_active_alert_id(agent.id, db)
+
     return templates.TemplateResponse(
         request=request,
         name="alerts/list.html",
@@ -95,6 +142,8 @@ async def alerts_page(
             "completed_count": completed_count,
             "properties": properties,
             "agents": agents,
+            "active_alert_id": active_alert_id,
+            "is_admin": is_admin(current_user),
             "AlertType": AlertType,
             "AlertPriority": AlertPriority,
             "AlertStatus": AlertStatus
@@ -132,6 +181,10 @@ async def alert_detail(
         AlertFollowUp.alert_id == alert_id
     ).order_by(AlertFollowUp.created_at.desc()).all()
 
+    # Cola secuencial: si esta no es la alerta activa del agente, se bloquean
+    # las acciones (marcar leída, seguimiento, completar).
+    alert_locked = is_alert_locked_for_user(alert, current_user, db)
+
     return templates.TemplateResponse(
         request=request,
         name="alerts/detail.html",
@@ -140,6 +193,7 @@ async def alert_detail(
             "alert": alert,
             "follow_ups": follow_ups,
             "current_user": current_user,
+            "alert_locked": alert_locked,
             "FollowUpActionType": FollowUpActionType,
             "AlertStatus": AlertStatus
         }
@@ -236,6 +290,12 @@ async def mark_alert_read(
             set_flash(response, "error", "No tienes permisos para esta alerta")
             return response
 
+    # Cola secuencial: solo se puede trabajar la alerta activa
+    if is_alert_locked_for_user(alert, current_user, db):
+        response = RedirectResponse(url="/alerts", status_code=302)
+        set_flash(response, "error", "Debes completar tu alerta activa antes de atender esta")
+        return response
+
     try:
         if not alert.read_at:
             alert.read_at = datetime.utcnow()
@@ -284,6 +344,12 @@ async def add_follow_up(
             response = RedirectResponse(url="/alerts", status_code=302)
             set_flash(response, "error", "No tienes permisos para esta alerta")
             return response
+
+    # Cola secuencial: solo se puede trabajar la alerta activa
+    if is_alert_locked_for_user(alert, current_user, db):
+        response = RedirectResponse(url="/alerts", status_code=302)
+        set_flash(response, "error", "Debes completar tu alerta activa antes de atender esta")
+        return response
 
     try:
         # Parsear fecha si existe
@@ -346,6 +412,12 @@ async def complete_alert(
             response = RedirectResponse(url="/alerts", status_code=302)
             set_flash(response, "error", "No tienes permisos para esta alerta")
             return response
+
+    # Cola secuencial: solo se puede completar la alerta activa
+    if is_alert_locked_for_user(alert, current_user, db):
+        response = RedirectResponse(url="/alerts", status_code=302)
+        set_flash(response, "error", "Debes completar tu alerta activa antes de atender esta")
+        return response
 
     try:
         alert.status = AlertStatus.COMPLETED

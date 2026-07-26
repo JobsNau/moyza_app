@@ -1,5 +1,6 @@
 import os
 import base64
+import logging
 from datetime import datetime
 
 from fastapi import APIRouter
@@ -25,10 +26,21 @@ from app.web.dependencies.auth import is_admin, get_agent_from_user
 
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 templates = Jinja2Templates(
     directory="app/web/templates"
 )
+
+
+def _clean(value):
+    """Normaliza un campo opcional de formulario: '' o espacios -> None."""
+    if value is None:
+        return None
+
+    value = value.strip()
+
+    return value or None
 
 
 @router.get("/agents", response_class=HTMLResponse)
@@ -63,13 +75,26 @@ async def agents_page(
 @router.post("/agents/create")
 async def create_agent(
         request: Request,
-        name: str = Form(...),
-        email: str = Form(...),
+        name: str = Form(None),
+        email: str = Form(None),
         dni: str = Form(None),
-        phone: str = Form(...),
-        zone: str = Form(...),
+        phone: str = Form(None),
+        zone: str = Form(None),
+        company: str = Form(None),
         db: Session = Depends(get_db)
     ):
+
+    # Solo nombre y correo son obligatorios; el resto es opcional.
+    # Se normaliza aquí para no depender de la validación de FastAPI, que
+    # devolvería un 422 sin plantilla (la página "se caía").
+    name = (name or "").strip()
+    email = (email or "").strip()
+
+    if not name or not email:
+        return RedirectResponse(
+            url="/agents?error=missing_fields",
+            status_code=302
+        )
 
     existing_agent = db.query(Agent).filter(
         Agent.email == email
@@ -81,17 +106,27 @@ async def create_agent(
             status_code=302
         )
 
-    agent = Agent(
-        name=name,
-        email=email,
-        dni=dni if dni else None,
-        phone=phone,
-        zone=zone
-    )
+    try:
+        agent = Agent(
+            name=name,
+            email=email,
+            dni=_clean(dni),
+            phone=_clean(phone),
+            zone=_clean(zone),
+            company=_clean(company)
+        )
 
-    db.add(agent)
+        db.add(agent)
 
-    db.commit()
+        db.commit()
+
+    except Exception:
+        db.rollback()
+        logger.exception("Error creando agente: email=%s", email)
+        return RedirectResponse(
+            url="/agents?error=save_failed",
+            status_code=302
+        )
 
     return RedirectResponse(
         url="/agents",
@@ -102,28 +137,72 @@ async def create_agent(
 @router.post("/agents/update")
 async def update_agent(
     request: Request,
-    agent_id: int = Form(...),
-    name: str = Form(...),
-    email: str = Form(...),
+    agent_id: str = Form(None),
+    name: str = Form(None),
+    email: str = Form(None),
     dni: str = Form(None),
-    phone: str = Form(...),
-    zone: str = Form(...),
+    phone: str = Form(None),
+    zone: str = Form(None),
+    company: str = Form(None),
     db: Session = Depends(get_db)
 ):
+
+    try:
+        agent_id = int(agent_id)
+    except (TypeError, ValueError):
+        return RedirectResponse(
+            url="/agents?error=missing_fields",
+            status_code=302
+        )
+
+    name = (name or "").strip()
+    email = (email or "").strip()
+
+    if not name or not email:
+        return RedirectResponse(
+            url="/agents?error=missing_fields",
+            status_code=302
+        )
 
     agent = db.query(Agent).filter(
         Agent.id == agent_id
     ).first()
 
-    if agent:
+    if not agent:
+        return RedirectResponse(
+            url="/agents?error=agent_not_found",
+            status_code=302
+        )
 
+    # El correo debe seguir siendo único entre agentes
+    email_owner = db.query(Agent).filter(
+        Agent.email == email,
+        Agent.id != agent_id
+    ).first()
+
+    if email_owner:
+        return RedirectResponse(
+            url="/agents?error=email_exists",
+            status_code=302
+        )
+
+    try:
         agent.name = name
         agent.email = email
-        agent.dni = dni if dni else None
-        agent.phone = phone
-        agent.zone = zone
+        agent.dni = _clean(dni)
+        agent.phone = _clean(phone)
+        agent.zone = _clean(zone)
+        agent.company = _clean(company)
 
         db.commit()
+
+    except Exception:
+        db.rollback()
+        logger.exception("Error actualizando agente: agent_id=%s", agent_id)
+        return RedirectResponse(
+            url="/agents?error=save_failed",
+            status_code=302
+        )
 
     return RedirectResponse(
         url="/agents",

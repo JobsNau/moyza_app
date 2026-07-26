@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse
 from fastapi.templating import Jinja2Templates
 
 from sqlalchemy.orm import Session
-from sqlalchemy import func, case
+from sqlalchemy import func, case, or_
 
 from app.core.constants import AlertType, PropertyStatus
 from app.core.constants import AlertPriority
@@ -40,6 +40,9 @@ templates = Jinja2Templates(
 
 # Estados que se consideran "abiertos" para la cola secuencial del agente
 OPEN_ALERT_STATUSES = [AlertStatus.PENDING, AlertStatus.IN_PROGRESS]
+
+# Máximo de sugerencias devueltas por el autocompletado de propiedades
+PROPERTY_SEARCH_LIMIT = 15
 
 
 def get_active_alert_id(agent_id: int, db: Session):
@@ -119,11 +122,10 @@ async def alerts_page(
     in_progress_count = base_query.filter(PropertyAlert.status == AlertStatus.IN_PROGRESS).count()
     completed_count = base_query.filter(PropertyAlert.status == AlertStatus.COMPLETED).count()
 
-    # Obtener propiedades y agentes para el formulario de creación (solo admin)
-    properties = []
+    # Agentes para el formulario de creación (solo admin). Las propiedades no se
+    # precargan: el formulario las busca por /alerts/search-properties.
     agents = []
     if is_admin(current_user):
-        properties = db.query(Property).filter(Property.status != PropertyStatus.ARCHIVED)
         agents = db.query(Agent).all()
 
     # Cola secuencial: para un agente, solo la alerta activa (más antigua abierta)
@@ -144,7 +146,6 @@ async def alerts_page(
             "pending_count": pending_count,
             "in_progress_count": in_progress_count,
             "completed_count": completed_count,
-            "properties": properties,
             "agents": agents,
             "active_alert_id": active_alert_id,
             "is_admin": is_admin(current_user),
@@ -153,6 +154,63 @@ async def alerts_page(
             "AlertStatus": AlertStatus
         }
     )
+
+
+@router.get("/alerts/search-properties")
+async def search_properties(
+    request: Request,
+    q: str = "",
+    db: Session = Depends(get_db)
+):
+    """Autocompletado de propiedades para el formulario de nueva alerta.
+
+    Devuelve como máximo PROPERTY_SEARCH_LIMIT coincidencias por título,
+    dirección o ciudad. Solo admin, igual que la creación de alertas.
+
+    NOTA: debe declararse antes de /alerts/{alert_id}, o FastAPI intentaría
+    resolver "search-properties" como un id y devolvería 422.
+    """
+
+    current_user = request.state.user
+
+    if not is_admin(current_user):
+        return JSONResponse(status_code=403, content={"results": []})
+
+    term = (q or "").strip()
+
+    if len(term) < 2:
+        return JSONResponse(content={"results": []})
+
+    like = f"%{term}%"
+
+    properties = (
+        db.query(Property)
+        .filter(
+            Property.status != PropertyStatus.ARCHIVED,
+            Property.agent_id.isnot(None),
+            or_(
+                Property.title.ilike(like),
+                Property.address.ilike(like),
+                Property.city.ilike(like),
+            ),
+        )
+        .order_by(Property.title.asc())
+        .limit(PROPERTY_SEARCH_LIMIT)
+        .all()
+    )
+
+    results = [
+        {
+            "id": p.id,
+            "title": p.title,
+            "address": p.address or "",
+            "city": p.city or "",
+            "agent": p.agent.name if p.agent else "",
+        }
+        for p in properties
+    ]
+
+    return JSONResponse(content={"results": results})
 
 
 @router.get("/alerts/{alert_id}", response_class=HTMLResponse)

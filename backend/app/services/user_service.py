@@ -52,9 +52,8 @@ def create_user(db: Session, user: UserCreate):
         if not existing_agent:
             db_agent = Agent(
                 name=user.full_name,
-                email=user.email,
-                phone="",  # Se puede actualizar después
-                zone=""    # Se puede actualizar después
+                email=user.email
+                # phone, zone y company son opcionales: se completan después
             )
             db.add(db_agent)
             db.commit()

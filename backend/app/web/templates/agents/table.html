@@ -29,6 +29,10 @@
                     Zona
                 </th>
 
+                <th class="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-600 whitespace-nowrap">
+                    Empresa
+                </th>
+
                 <th class="px-3 sm:px-6 py-3 sm:py-4 text-right text-xs sm:text-sm font-semibold text-gray-600 whitespace-nowrap">
                     Acciones
                 </th>
@@ -56,11 +60,15 @@
                 </td>
 
                 <td class="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-700 whitespace-nowrap">
-                    {{ agent.phone }}
+                    {{ agent.phone or '-' }}
                 </td>
 
                 <td class="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-700">
                     {{ agent.zone or '-' }}
+                </td>
+
+                <td class="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-700">
+                    {{ agent.company or '-' }}
                 </td>
 
                 <td class="px-3 sm:px-6 py-3 sm:py-4">
@@ -69,7 +77,7 @@
 
                         <button
                             class="{% if agent.signature_filepath %}bg-green-100 hover:bg-green-200 text-green-700{% else %}bg-purple-100 hover:bg-purple-200 text-purple-700{% endif %} px-2 sm:px-4 py-2 rounded-lg text-xs sm:text-sm transition-colors inline-flex items-center"
-                            onclick="openSignatureModal('{{ agent.id }}', '{{ agent.name }}')"
+                            onclick='openSignatureModal({{ agent.id | tojson }}, {{ agent.name | tojson }})'
                             title="{% if agent.signature_filepath %}Firma registrada{% else %}Subir firma{% endif %}"
                         >
                             <span class="hidden sm:inline">{% if agent.signature_filepath %}✓ Firma{% else %}Firma{% endif %}</span>
@@ -80,16 +88,17 @@
 
                         <button
                             class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 sm:px-4 py-2 rounded-lg text-xs sm:text-sm transition-colors inline-flex items-center"
-                            onclick="editAgent(
-                                '{{ agent.id }}',
-                                '{{ agent.name }}',
-                                '{{ agent.email }}',
-                                '{{ agent.dni or '' }}',
-                                '{{ agent.phone }}',
-                                '{{ agent.zone }}',
-                                '{{ agent.signature_filepath or '' }}',
-                                '{{ agent.signature_uploaded_at.strftime('%d/%m/%Y %H:%M') if agent.signature_uploaded_at else '' }}'
-                            )"
+                            onclick='editAgent(
+                                {{ agent.id | tojson }},
+                                {{ agent.name | tojson }},
+                                {{ agent.email | tojson }},
+                                {{ (agent.dni or "") | tojson }},
+                                {{ (agent.phone or "") | tojson }},
+                                {{ (agent.zone or "") | tojson }},
+                                {{ (agent.company or "") | tojson }},
+                                {{ (agent.signature_filepath or "") | tojson }},
+                                {{ (agent.signature_uploaded_at.strftime("%d/%m/%Y %H:%M") if agent.signature_uploaded_at else "") | tojson }}
+                            )'
                         >
                             <span class="hidden sm:inline">Editar</span>
                             <svg class="w-4 h-4 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">

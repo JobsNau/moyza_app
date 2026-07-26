@@ -4,6 +4,8 @@ from fastapi import Depends
 from fastapi import Form
 from fastapi import HTTPException
 
+from pydantic import ValidationError
+
 from sqlalchemy.orm import Session
 
 from fastapi.responses import HTMLResponse
@@ -176,6 +178,10 @@ async def create_user_endpoint(
 
         create_user(db, user_data)
         set_flash(response, "success", "Usuario creado correctamente")
+
+    except ValidationError as e:
+        # Primer mensaje de validación (ej. teléfono con formato no válido)
+        set_flash(response, "error", e.errors()[0]["msg"].replace("Value error, ", ""))
 
     except HTTPException as e:
         set_flash(response, "error", e.detail)

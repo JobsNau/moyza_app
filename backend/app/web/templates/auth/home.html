@@ -159,6 +159,18 @@ Auth
                     {% endif %}
                 </span>
             </div>
+            <div class="text-sm">
+                <span class="text-gray-500">Teléfono:</span>
+                <span class="font-medium">
+                    {{ user.phone or '—' }}
+                </span>
+            </div>
+            <div class="text-sm">
+                <span class="text-gray-500">Empresa:</span>
+                <span class="font-medium">
+                    {{ user.company or '—' }}
+                </span>
+            </div>
         </div>
         {% endfor %}
     </div>
@@ -173,6 +185,12 @@ Auth
                     </th>
                     <th class="text-left py-3">
                         Correo
+                    </th>
+                    <th class="text-left py-3">
+                        Teléfono
+                    </th>
+                    <th class="text-left py-3">
+                        Empresa
                     </th>
                     <th class="text-left py-3">
                         Rol
@@ -193,6 +211,12 @@ Auth
                     </td>
                     <td class="py-4">
                         {{ user.email }}
+                    </td>
+                    <td class="py-4">
+                        {{ user.phone or '—' }}
+                    </td>
+                    <td class="py-4">
+                        {{ user.company or '—' }}
                     </td>
                     <td class="py-4">
                         {% if user.role %}

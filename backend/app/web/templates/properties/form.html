@@ -59,42 +59,71 @@
                         <label class="block mb-2 text-sm font-medium text-gray-700">
                             Valor <span class="text-red-500">*</span>
                         </label>
-                        <input
-                            type="number"
-                            name="price"
-                            placeholder="Ej: 150000000"
-                            class="w-full border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
-                            id="price"
-                            required
-                        >
+
+                        <div class="flex gap-2">
+                            <input
+                                type="number"
+                                name="price"
+                                step="0.01"
+                                min="0"
+                                placeholder="Ej: 150000"
+                                class="w-full border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                                id="price"
+                                required
+                            >
+
+                            <select
+                                name="moneda"
+                                id="moneda"
+                                class="w-28 border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                            >
+                                <option value="EUR">EUR</option>
+                                <option value="USD">USD</option>
+                                <option value="GBP">GBP</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div>
                         <label class="block mb-2 text-sm font-medium text-gray-700">
-                            Ciudad <span class="text-red-500">*</span>
+                            Tipo de inmueble
                         </label>
                         <input
                             type="text"
-                            name="city"
-                            placeholder="Ej: Bogotá"
+                            name="property_type"
+                            placeholder="Ej: Piso, Chalet, Local"
                             class="w-full border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
-                            id="city"
-                            required
+                            id="property_type"
+                            list="propertyTypeOptions"
                         >
+                        <datalist id="propertyTypeOptions">
+                            <option value="Piso"></option>
+                            <option value="Casa"></option>
+                            <option value="Chalet"></option>
+                            <option value="Ático"></option>
+                            <option value="Dúplex"></option>
+                            <option value="Local"></option>
+                            <option value="Nave"></option>
+                            <option value="Oficina"></option>
+                            <option value="Garaje"></option>
+                            <option value="Terreno"></option>
+                        </datalist>
                     </div>
 
                     <div>
                         <label class="block mb-2 text-sm font-medium text-gray-700">
-                            Dirección <span class="text-red-500">*</span>
+                            Operación
                         </label>
-                        <input
-                            type="text"
-                            name="address"
-                            placeholder="Ej: Calle 123 #45-67"
+                        <select
+                            name="business_type"
+                            id="business_type"
                             class="w-full border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
-                            id="address"
-                            required
                         >
+                            <option value="Venta">Venta</option>
+                            <option value="Alquiler">Alquiler</option>
+                            <option value="Alquiler con opción a compra">Alquiler con opción a compra</option>
+                            <option value="Traspaso">Traspaso</option>
+                        </select>
                     </div>
 
                     <div>
@@ -134,7 +163,7 @@
 
                 <div class="mt-4">
                     <label class="block mb-2 text-sm font-medium text-gray-700">
-                        Descripción
+                        Observaciones
                     </label>
                     <textarea
                         name="description"
@@ -146,13 +175,420 @@
                 </div>
             </div>
 
+            <!-- Identificación -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5a1.99 1.99 0 011.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.99 1.99 0 013 12V7a4 4 0 014-4z"></path>
+                    </svg>
+                    Identificación
+                </h3>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+                    <div>
+                        <label class="block mb-2 text-sm font-medium text-gray-700">
+                            Referencia
+                        </label>
+                        <input
+                            type="text"
+                            name="referencia"
+                            placeholder="Ej: MOY-00123"
+                            class="w-full border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                            id="referencia"
+                        >
+                    </div>
+
+                    <div>
+                        <label class="block mb-2 text-sm font-medium text-gray-700">
+                            Código
+                        </label>
+                        <input
+                            type="text"
+                            name="codigo"
+                            class="w-full border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                            id="codigo"
+                        >
+                    </div>
+
+                    <div>
+                        <label class="block mb-2 text-sm font-medium text-gray-700">
+                            Ref. catastral
+                        </label>
+                        <input
+                            type="text"
+                            name="ref_catastral"
+                            class="w-full border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                            id="ref_catastral"
+                        >
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Ubicación -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                    Ubicación
+                </h3>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                    <div>
+                        <label class="block mb-2 text-sm font-medium text-gray-700">
+                            Dirección <span class="text-red-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            name="address"
+                            placeholder="Ej: Calle Mayor 12, 3º B"
+                            class="w-full border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                            id="address"
+                            required
+                        >
+                    </div>
+
+                    <div>
+                        <label class="block mb-2 text-sm font-medium text-gray-700">
+                            Población <span class="text-red-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            name="city"
+                            placeholder="Ej: Madrid"
+                            class="w-full border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                            id="city"
+                            required
+                        >
+                    </div>
+
+                    <div>
+                        <label class="block mb-2 text-sm font-medium text-gray-700">
+                            Zona
+                        </label>
+                        <input
+                            type="text"
+                            name="zona"
+                            placeholder="Ej: Centro"
+                            class="w-full border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                            id="zona"
+                        >
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+
+                        <div>
+                            <label class="block mb-2 text-sm font-medium text-gray-700">
+                                Cód. postal
+                            </label>
+                            <input
+                                type="text"
+                                name="cod_postal"
+                                maxlength="5"
+                                inputmode="numeric"
+                                placeholder="28001"
+                                class="w-full border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                                id="cod_postal"
+                            >
+                        </div>
+
+                        <div>
+                            <label class="block mb-2 text-sm font-medium text-gray-700">
+                                País
+                            </label>
+                            <input
+                                type="text"
+                                name="pais"
+                                placeholder="España"
+                                class="w-full border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                                id="pais"
+                            >
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Características -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+                    </svg>
+                    Características
+                </h3>
+
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+
+                    <div>
+                        <label class="block mb-2 text-sm font-medium text-gray-700">
+                            M2 útiles
+                        </label>
+                        <input
+                            type="number"
+                            name="m2_utiles"
+                            step="0.01"
+                            min="0"
+                            class="w-full border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                            id="m2_utiles"
+                        >
+                    </div>
+
+                    <div>
+                        <label class="block mb-2 text-sm font-medium text-gray-700">
+                            M2 construidos
+                        </label>
+                        <input
+                            type="number"
+                            name="m2_construidos"
+                            step="0.01"
+                            min="0"
+                            class="w-full border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                            id="m2_construidos"
+                        >
+                    </div>
+
+                    <div>
+                        <label class="block mb-2 text-sm font-medium text-gray-700">
+                            Planta
+                        </label>
+                        <input
+                            type="text"
+                            name="planta"
+                            placeholder="Ej: 3º"
+                            class="w-full border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                            id="planta"
+                        >
+                    </div>
+
+                    <div>
+                        <label class="block mb-2 text-sm font-medium text-gray-700">
+                            Dormitorios
+                        </label>
+                        <input
+                            type="number"
+                            name="num_dormitorios"
+                            min="0"
+                            class="w-full border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                            id="num_dormitorios"
+                        >
+                    </div>
+
+                    <div>
+                        <label class="block mb-2 text-sm font-medium text-gray-700">
+                            Baños y aseos
+                        </label>
+                        <input
+                            type="number"
+                            name="num_banos_aseos"
+                            min="0"
+                            class="w-full border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                            id="num_banos_aseos"
+                        >
+                    </div>
+
+                    <div>
+                        <label class="block mb-2 text-sm font-medium text-gray-700">
+                            Salones
+                        </label>
+                        <input
+                            type="number"
+                            name="num_salones"
+                            min="0"
+                            class="w-full border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                            id="num_salones"
+                        >
+                    </div>
+
+                    <div>
+                        <label class="block mb-2 text-sm font-medium text-gray-700">
+                            Terrazas
+                        </label>
+                        <input
+                            type="number"
+                            name="num_terrazas"
+                            min="0"
+                            class="w-full border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                            id="num_terrazas"
+                        >
+                    </div>
+
+                    <div>
+                        <label class="block mb-2 text-sm font-medium text-gray-700">
+                            Armarios
+                        </label>
+                        <input
+                            type="number"
+                            name="num_armarios"
+                            min="0"
+                            class="w-full border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                            id="num_armarios"
+                        >
+                    </div>
+
+                    <div>
+                        <label class="block mb-2 text-sm font-medium text-gray-700">
+                            Garaje / Aparcam.
+                        </label>
+                        <input
+                            type="number"
+                            name="num_garaje_aparcam"
+                            min="0"
+                            class="w-full border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                            id="num_garaje_aparcam"
+                        >
+                    </div>
+
+                    <div>
+                        <label class="block mb-2 text-sm font-medium text-gray-700">
+                            Ascensores
+                        </label>
+                        <input
+                            type="number"
+                            name="num_ascensores"
+                            min="0"
+                            class="w-full border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                            id="num_ascensores"
+                        >
+                    </div>
+
+                    <div>
+                        <label class="block mb-2 text-sm font-medium text-gray-700">
+                            Despachos
+                        </label>
+                        <input
+                            type="number"
+                            name="num_despachos"
+                            min="0"
+                            class="w-full border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                            id="num_despachos"
+                        >
+                    </div>
+
+                    <div>
+                        <label class="block mb-2 text-sm font-medium text-gray-700">
+                            Locales
+                        </label>
+                        <input
+                            type="number"
+                            name="num_locales"
+                            min="0"
+                            class="w-full border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                            id="num_locales"
+                        >
+                    </div>
+
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+
+                    <div>
+                        <label class="block mb-2 text-sm font-medium text-gray-700">
+                            Estado del inmueble
+                        </label>
+                        <input
+                            type="text"
+                            name="estado_inmueble"
+                            placeholder="Ej: Nuevo, A reformar"
+                            class="w-full border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                            id="estado_inmueble"
+                            list="estadoInmuebleOptions"
+                        >
+                        <datalist id="estadoInmuebleOptions">
+                            <option value="Nuevo"></option>
+                            <option value="Buen estado"></option>
+                            <option value="A reformar"></option>
+                            <option value="Reformado"></option>
+                            <option value="En construcción"></option>
+                        </datalist>
+                    </div>
+
+                    <div>
+                        <label class="block mb-2 text-sm font-medium text-gray-700">
+                            Situación
+                        </label>
+                        <input
+                            type="text"
+                            name="situacion"
+                            placeholder="Ej: Libre, Alquilado, Ocupado"
+                            class="w-full border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                            id="situacion"
+                            list="situacionOptions"
+                        >
+                        <datalist id="situacionOptions">
+                            <option value="Libre"></option>
+                            <option value="Alquilado"></option>
+                            <option value="Ocupado"></option>
+                        </datalist>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Gestión -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l6.964-6.964A6 6 0 1121 9z"></path>
+                    </svg>
+                    Gestión
+                </h3>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                    <div>
+                        <label class="block mb-2 text-sm font-medium text-gray-700">
+                            Fecha de alta
+                        </label>
+                        <input
+                            type="date"
+                            name="fecha_alta"
+                            class="w-full border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                            id="fecha_alta"
+                        >
+                    </div>
+
+                    <div>
+                        <label class="block mb-2 text-sm font-medium text-gray-700">
+                            Llaves
+                        </label>
+                        <input
+                            type="text"
+                            name="llaves"
+                            placeholder="Ej: En oficina, juego nº 4"
+                            class="w-full border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                            id="llaves"
+                        >
+                    </div>
+
+                </div>
+
+                <div class="mt-4">
+                    <label class="block mb-2 text-sm font-medium text-gray-700">
+                        Mandato / Acuerdo
+                    </label>
+                    <textarea
+                        name="mandato_acuerdo"
+                        placeholder="Condiciones del mandato de venta o acuerdo con el propietario..."
+                        class="w-full border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                        id="mandato_acuerdo"
+                        rows="2"
+                    ></textarea>
+                </div>
+            </div>
+
             <!-- Estado (solo en modo edición) -->
             <div id="statusContainer" class="mb-6 hidden">
                 <h3 class="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
-                    Estado
+                    Estado comercial
                 </h3>
 
                 <select
@@ -284,6 +720,57 @@
 
 <script>
 
+// Campos del formulario que se rellenan desde los data-* del botón Editar.
+// El nombre del campo coincide con el id del input y con la clave camelCase
+// del dataset (data-ref-catastral -> refCatastral).
+const PROPERTY_FIELDS = [
+    "title",
+    "price",
+    "moneda",
+    "property_type",
+    "business_type",
+    "client_id",
+    "agent_id",
+    "description",
+    "referencia",
+    "codigo",
+    "ref_catastral",
+    "address",
+    "city",
+    "zona",
+    "cod_postal",
+    "pais",
+    "m2_utiles",
+    "m2_construidos",
+    "planta",
+    "num_dormitorios",
+    "num_banos_aseos",
+    "num_salones",
+    "num_terrazas",
+    "num_armarios",
+    "num_garaje_aparcam",
+    "num_ascensores",
+    "num_despachos",
+    "num_locales",
+    "estado_inmueble",
+    "situacion",
+    "fecha_alta",
+    "llaves",
+    "mandato_acuerdo",
+    "status"
+];
+
+// Valores que se aplican cuando el dato viene vacío
+const PROPERTY_FALLBACKS = {
+    moneda: "EUR",
+    business_type: "Venta",
+    status: "Activa"
+};
+
+function datasetKey(field) {
+    return field.replace(/_([a-z0-9])/g, (match, char) => char.toUpperCase());
+}
+
 function toggleReportSchedule() {
     const checkbox = document.getElementById('auto_send_report');
     const container = document.getElementById('reportScheduleContainer');
@@ -310,24 +797,28 @@ function openModal() {
     modal.classList.add("flex");
 }
 
-function editProperty(id, title, price, client_id, city, agent_id, address, status, description, auto_send_report, report_frequency, report_day, report_hour) {
+function editProperty(data) {
     openModal();
 
     document.getElementById("modalTitle").innerText = "Actualizar Propiedad";
     document.getElementById("statusContainer").classList.remove("hidden");
-    document.getElementById("property_id").value = id;
-    document.getElementById("title").value = title;
-    document.getElementById("price").value = price;
-    document.getElementById("client_id").value = client_id;
-    document.getElementById("city").value = city;
-    document.getElementById("agent_id").value = agent_id;
-    document.getElementById("address").value = address;
-    document.getElementById("status").value = status;
-    document.getElementById("description").value = description || "";
+    document.getElementById("property_id").value = data.id || "";
+
+    PROPERTY_FIELDS.forEach((field) => {
+        const input = document.getElementById(field);
+
+        if (!input) {
+            return;
+        }
+
+        const value = data[datasetKey(field)];
+
+        input.value = value || PROPERTY_FALLBACKS[field] || "";
+    });
 
     // Configurar auto_send_report
     const autoSendCheckbox = document.getElementById("auto_send_report");
-    autoSendCheckbox.checked = auto_send_report === 'true' || auto_send_report === true;
+    autoSendCheckbox.checked = data.autoSendReport === 'true' || data.autoSendReport === true;
 
     // Mostrar/ocultar configuración de horario
     const scheduleContainer = document.getElementById("reportScheduleContainer");
@@ -335,14 +826,14 @@ function editProperty(id, title, price, client_id, city, agent_id, address, stat
         scheduleContainer.classList.remove("hidden");
 
         // Llenar los campos de horario
-        if (report_frequency) {
-            document.getElementById("report_frequency").value = report_frequency;
+        if (data.reportFrequency) {
+            document.getElementById("report_frequency").value = data.reportFrequency;
         }
-        if (report_day) {
-            document.getElementById("report_day").value = report_day;
+        if (data.reportDay) {
+            document.getElementById("report_day").value = data.reportDay;
         }
-        if (report_hour) {
-            document.getElementById("report_hour").value = report_hour;
+        if (data.reportHour) {
+            document.getElementById("report_hour").value = data.reportHour;
         }
     } else {
         scheduleContainer.classList.add("hidden");
@@ -356,21 +847,7 @@ function editPropertyFromButton(button) {
         return;
     }
 
-    editProperty(
-        button.dataset.id,
-        button.dataset.title || "",
-        button.dataset.price || "",
-        button.dataset.clientId || "",
-        button.dataset.city || "",
-        button.dataset.agentId || "",
-        button.dataset.address || "",
-        button.dataset.status || "Activa",
-        button.dataset.description || "",
-        button.dataset.autoSendReport || "false",
-        button.dataset.reportFrequency || "",
-        button.dataset.reportDay || "",
-        button.dataset.reportHour || ""
-    );
+    editProperty(button.dataset);
 }
 
 function closeModal() {

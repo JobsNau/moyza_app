@@ -18,7 +18,7 @@ class Agent(Base):
 
     name = Column(String, nullable=False)
 
-    email = Column(String, nullable=False, unique=True)
+    email = Column(String, nullable=True, unique=True)
 
     dni = Column(String, nullable=True)
 

@@ -1,7 +1,34 @@
 <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
 
-    <!-- Tabla con scroll horizontal en móvil -->
-    <div class="overflow-x-auto -mx-px">
+    <div class="p-3 sm:p-4 border-b border-gray-200 bg-white">
+
+        <form method="GET" action="/clients" class="flex items-center gap-3">
+
+            <input
+                type="text"
+                name="search"
+                placeholder="Buscar por nombre, correo o teléfono..."
+                value="{{ search or '' }}"
+                class="w-full border border-gray-300 rounded-xl p-2 sm:p-3 focus:outline-none focus:ring-2 focus:ring-gray-200 text-sm sm:text-base"
+            >
+
+            {% if search %}
+
+            <a
+                href="/clients"
+                class="text-xs sm:text-sm text-gray-500 hover:text-gray-800 whitespace-nowrap"
+            >
+                Limpiar
+            </a>
+
+            {% endif %}
+
+        </form>
+
+    </div>
+
+    <!-- Scroll horizontal en móvil y vertical cuando hay muchos clientes -->
+    <div class="overflow-x-auto overflow-y-auto max-h-[60vh] -mx-px">
 
     <table class="w-full min-w-[700px]">
 
@@ -9,23 +36,23 @@
 
             <tr>
 
-                <th class="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-600 whitespace-nowrap">
+                <th class="sticky top-0 z-10 bg-gray-50 px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-600 whitespace-nowrap">
                     Nombre
                 </th>
 
-                <th class="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-600 whitespace-nowrap">
+                <th class="sticky top-0 z-10 bg-gray-50 px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-600 whitespace-nowrap">
                     Correo
                 </th>
 
-                <th class="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-600 whitespace-nowrap">
+                <th class="sticky top-0 z-10 bg-gray-50 px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-600 whitespace-nowrap">
                     Teléfono
                 </th>
 
-                <th class="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-600 whitespace-nowrap">
+                <th class="sticky top-0 z-10 bg-gray-50 px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-600 whitespace-nowrap">
                     Estado
                 </th>
 
-                <th class="px-3 sm:px-6 py-3 sm:py-4 text-right text-xs sm:text-sm font-semibold text-gray-600 whitespace-nowrap">
+                <th class="sticky top-0 z-10 bg-gray-50 px-3 sm:px-6 py-3 sm:py-4 text-right text-xs sm:text-sm font-semibold text-gray-600 whitespace-nowrap">
                     Acciones
                 </th>
 
@@ -114,6 +141,24 @@
             </tr>
 
             {% endfor %}
+
+            {% if not clients %}
+
+            <tr>
+
+                <td colspan="5" class="px-3 sm:px-6 py-8 text-center text-xs sm:text-sm text-gray-500">
+
+                    {% if search %}
+                    No se encontraron clientes para "{{ search }}"
+                    {% else %}
+                    Aún no hay clientes registrados
+                    {% endif %}
+
+                </td>
+
+            </tr>
+
+            {% endif %}
 
         </tbody>
 

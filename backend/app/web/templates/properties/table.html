@@ -7,17 +7,28 @@
             <input
                 type="text"
                 name="search"
-                placeholder="Buscar propiedad..."
-                value="{{ request.query_params.get('search', '') }}"
+                placeholder="Buscar por título, dirección, ciudad, cliente o agente..."
+                value="{{ search or '' }}"
                 class="w-full border border-gray-300 rounded-xl p-2 sm:p-3 focus:outline-none focus:ring-2 focus:ring-gray-200 text-sm sm:text-base"
             >
+
+            {% if search %}
+
+            <a
+                href="/properties"
+                class="text-xs sm:text-sm text-gray-500 hover:text-gray-800 whitespace-nowrap"
+            >
+                Limpiar
+            </a>
+
+            {% endif %}
 
         </form>
 
     </div>
 
-    <!-- Tabla con scroll horizontal en móvil -->
-    <div class="overflow-x-auto -mx-px">
+    <!-- Scroll horizontal en móvil y vertical cuando hay muchas propiedades -->
+    <div class="overflow-x-auto overflow-y-auto max-h-[60vh] -mx-px">
 
     <table class="w-full min-w-[800px]">
 
@@ -25,35 +36,35 @@
 
             <tr>
 
-                <th class="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-600 whitespace-nowrap">
+                <th class="sticky top-0 z-10 bg-gray-50 px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-600 whitespace-nowrap">
                     Propiedad
                 </th>
 
-                <th class="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-600 whitespace-nowrap">
+                <th class="sticky top-0 z-10 bg-gray-50 px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-600 whitespace-nowrap">
                     Cliente
                 </th>
 
-                <th class="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-600 whitespace-nowrap">
+                <th class="sticky top-0 z-10 bg-gray-50 px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-600 whitespace-nowrap">
                     Agente
                 </th>
 
-                <th class="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-600 whitespace-nowrap">
+                <th class="sticky top-0 z-10 bg-gray-50 px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-600 whitespace-nowrap">
                     Ciudad
                 </th>
 
-                <th class="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-600 whitespace-nowrap">
+                <th class="sticky top-0 z-10 bg-gray-50 px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-600 whitespace-nowrap">
                     Valor
                 </th>
 
-                <th class="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-600 whitespace-nowrap">
+                <th class="sticky top-0 z-10 bg-gray-50 px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-600 whitespace-nowrap">
                     Estado
                 </th>
 
-                <th class="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-600 whitespace-nowrap">
+                <th class="sticky top-0 z-10 bg-gray-50 px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-600 whitespace-nowrap">
                     Envío Auto
                 </th>
 
-                <th class="px-3 sm:px-6 py-3 sm:py-4 text-right text-xs sm:text-sm font-semibold text-gray-600 whitespace-nowrap">
+                <th class="sticky top-0 z-10 bg-gray-50 px-3 sm:px-6 py-3 sm:py-4 text-right text-xs sm:text-sm font-semibold text-gray-600 whitespace-nowrap">
                     Acciones
                 </th>
 
@@ -188,6 +199,24 @@
             </tr>
 
             {% endfor %}
+
+            {% if not properties %}
+
+            <tr>
+
+                <td colspan="8" class="px-3 sm:px-6 py-8 text-center text-xs sm:text-sm text-gray-500">
+
+                    {% if search %}
+                    No se encontraron propiedades para "{{ search }}"
+                    {% else %}
+                    Aún no hay propiedades registradas
+                    {% endif %}
+
+                </td>
+
+            </tr>
+
+            {% endif %}
 
         </tbody>
 

@@ -11,6 +11,7 @@ from fastapi.responses import RedirectResponse
 
 from fastapi.templating import Jinja2Templates
 
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.core.constants import PropertyInteractionType
@@ -63,20 +64,38 @@ async def properties_page(
             # Si no es admin y no tiene agente asociado, no mostrar nada
             base_query = base_query.filter(Property.id == -1)
 
-    properties = base_query.all()
-
     clients = db.query(Client).all()
 
     agents = db.query(Agent).all()
 
+    # Los contadores reflejan el total del usuario, no el resultado de la búsqueda
     active_count = base_query.filter(Property.status == PropertyStatus.ACTIVE).count()
     paused_count = base_query.filter(Property.status == PropertyStatus.PAUSED).count()
     sold_count = base_query.filter(Property.status == PropertyStatus.SOLD).count()
 
-    search = request.query_params.get("search")
+    search = (request.query_params.get("search") or "").strip()
+
+    filtered_query = base_query
 
     if search:
-        properties = base_query.filter(Property.title.contains(search)).all()
+        pattern = f"%{search}%"
+
+        filtered_query = (
+            filtered_query
+            .outerjoin(Client, Property.client_id == Client.id)
+            .outerjoin(Agent, Property.agent_id == Agent.id)
+            .filter(
+                or_(
+                    Property.title.ilike(pattern),
+                    Property.address.ilike(pattern),
+                    Property.city.ilike(pattern),
+                    Client.name.ilike(pattern),
+                    Agent.name.ilike(pattern)
+                )
+            )
+        )
+
+    properties = filtered_query.order_by(Property.title).all()
 
     return templates.TemplateResponse(
         request=request,
@@ -89,7 +108,8 @@ async def properties_page(
             "current_user": current_user,
             "active_count": active_count,
             "paused_count": paused_count,
-            "sold_count": sold_count
+            "sold_count": sold_count,
+            "search": search
         }
     )
 

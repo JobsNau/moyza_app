@@ -5,6 +5,7 @@ from app.models.property import Property
 from fastapi import APIRouter
 from fastapi import Request
 from fastapi import Depends
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -22,7 +23,20 @@ templates = Jinja2Templates(
 @router.get("/clients", response_class=HTMLResponse)
 async def clients_page(request: Request, db: Session = Depends(get_db)):
 
-    clients = db.query(Client).all()
+    base_query = db.query(Client)
+
+    search = (request.query_params.get("search") or "").strip()
+
+    if search:
+        base_query = base_query.filter(
+            or_(
+                Client.name.ilike(f"%{search}%"),
+                Client.email.ilike(f"%{search}%"),
+                Client.phone.ilike(f"%{search}%")
+            )
+        )
+
+    clients = base_query.order_by(Client.name).all()
 
     current_user = request.state.user
 
@@ -35,7 +49,8 @@ async def clients_page(request: Request, db: Session = Depends(get_db)):
             "request": request,
             "clients": clients,
             "current_user": current_user,
-            "error": error
+            "error": error,
+            "search": search
         }
     )
 

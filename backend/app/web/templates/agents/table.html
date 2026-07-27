@@ -52,7 +52,7 @@
                 </td>
 
                 <td class="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-700">
-                    {{ agent.email }}
+                    {{ agent.email or '-' }}
                 </td>
 
                 <td class="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-700">
@@ -91,7 +91,7 @@
                             onclick='editAgent(
                                 {{ agent.id | tojson }},
                                 {{ agent.name | tojson }},
-                                {{ agent.email | tojson }},
+                                {{ (agent.email or "") | tojson }},
                                 {{ (agent.dni or "") | tojson }},
                                 {{ (agent.phone or "") | tojson }},
                                 {{ (agent.zone or "") | tojson }},

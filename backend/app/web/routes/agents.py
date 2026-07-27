@@ -84,27 +84,30 @@ async def create_agent(
         db: Session = Depends(get_db)
     ):
 
-    # Solo nombre y correo son obligatorios; el resto es opcional.
+    # Solo el nombre es obligatorio; el resto es opcional.
     # Se normaliza aquí para no depender de la validación de FastAPI, que
     # devolvería un 422 sin plantilla (la página "se caía").
     name = (name or "").strip()
-    email = (email or "").strip()
+    email = _clean(email)
 
-    if not name or not email:
+    if not name:
         return RedirectResponse(
             url="/agents?error=missing_fields",
             status_code=302
         )
 
-    existing_agent = db.query(Agent).filter(
-        Agent.email == email
-    ).first()
+    # El correo solo debe ser único cuando se indica
+    if email:
 
-    if existing_agent:
-        return RedirectResponse(
-            url="/agents?error=email_exists",
-            status_code=302
-        )
+        existing_agent = db.query(Agent).filter(
+            Agent.email == email
+        ).first()
+
+        if existing_agent:
+            return RedirectResponse(
+                url="/agents?error=email_exists",
+                status_code=302
+            )
 
     try:
         agent = Agent(
@@ -156,9 +159,9 @@ async def update_agent(
         )
 
     name = (name or "").strip()
-    email = (email or "").strip()
+    email = _clean(email)
 
-    if not name or not email:
+    if not name:
         return RedirectResponse(
             url="/agents?error=missing_fields",
             status_code=302
@@ -174,17 +177,19 @@ async def update_agent(
             status_code=302
         )
 
-    # El correo debe seguir siendo único entre agentes
-    email_owner = db.query(Agent).filter(
-        Agent.email == email,
-        Agent.id != agent_id
-    ).first()
+    # El correo debe seguir siendo único entre agentes, cuando se indica
+    if email:
 
-    if email_owner:
-        return RedirectResponse(
-            url="/agents?error=email_exists",
-            status_code=302
-        )
+        email_owner = db.query(Agent).filter(
+            Agent.email == email,
+            Agent.id != agent_id
+        ).first()
+
+        if email_owner:
+            return RedirectResponse(
+                url="/agents?error=email_exists",
+                status_code=302
+            )
 
     try:
         agent.name = name

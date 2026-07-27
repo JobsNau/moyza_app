@@ -306,36 +306,118 @@ Detalle Propiedad
 
 </div>
 
-<div class="grid grid-cols-1 lg:grid-cols-1 gap-4 sm:gap-6 mb-6 sm:mb-8">
+{#
+    Campos que solo se muestran cuando tienen valor, para que la ficha no se
+    llene de "No definido". Cliente y agente sí se muestran siempre.
+#}
+{% macro field(label, value) %}
+    {% if value %}
+    <div>
+        <p class="text-xs text-gray-500">{{ label }}</p>
+        <p class="text-sm sm:text-base font-semibold text-gray-800 break-words">{{ value }}</p>
+    </div>
+    {% endif %}
+{% endmacro %}
 
-    <div class="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6">
+{% macro required_field(label, value) %}
+    <div>
+        <p class="text-xs text-gray-500">{{ label }}</p>
+        <p class="text-sm sm:text-base font-semibold text-gray-800 break-words">
+            {% if value %}{{ value }}{% else %}<span class="text-gray-400 font-normal">No definido</span>{% endif %}
+        </p>
+    </div>
+{% endmacro %}
 
-        <h3 class="text-base sm:text-lg font-bold mb-4">Detalle</h3>
+{#
+    Resumen de características en forma de etiquetas. Se omiten los contadores
+    a cero y los metros sin valor porque no aportan información.
+#}
+{% set features = [] %}
 
-        <div class="space-y-3">
+{% for value, label in [
+    (property.m2_utiles, "m² útiles"),
+    (property.m2_construidos, "m² construidos")
+] %}
+    {% if value %}
+        {# Se muestran decimales solo cuando los hay: 85,5 m² pero 100 m² #}
+        {% set amount = "{:,.2f}".format(value).rstrip("0").rstrip(".") %}
+        {% set _ = features.append(amount ~ " " ~ label) %}
+    {% endif %}
+{% endfor %}
 
-            <div>
-                <p class="text-xs sm:text-sm text-gray-500">Cliente</p>
-                <p class="text-sm sm:text-base font-semibold text-gray-800">
-                    {% if property.client %}{{ property.client.name }}{% else %}<span class="text-gray-400">No definido</span>{% endif %}
-                </p>
-            </div>
+{% for value, singular, plural in [
+    (property.num_dormitorios, "dormitorio", "dormitorios"),
+    (property.num_banos_aseos, "baño / aseo", "baños y aseos"),
+    (property.num_salones, "salón", "salones"),
+    (property.num_terrazas, "terraza", "terrazas"),
+    (property.num_armarios, "armario", "armarios"),
+    (property.num_garaje_aparcam, "plaza de garaje", "plazas de garaje"),
+    (property.num_ascensores, "ascensor", "ascensores"),
+    (property.num_despachos, "despacho", "despachos"),
+    (property.num_locales, "local", "locales")
+] %}
+    {% if value %}
+        {% set _ = features.append(value ~ " " ~ (singular if value == 1 else plural)) %}
+    {% endif %}
+{% endfor %}
 
-            <div>
-                <p class="text-xs sm:text-sm text-gray-500">Agente</p>
-                <p class="text-sm sm:text-base font-semibold text-gray-800">
-                    {% if property.agent %}{{ property.agent.name }}{% else %}<span class="text-gray-400">No definido</span>{% endif %}
-                </p>
-            </div>
+<div class="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
 
-            <div>
-                <p class="text-xs sm:text-sm text-gray-500">Descripción</p>
-                <p class="text-sm text-gray-700">
-                    {% if property.description %}{{ property.description }}{% else %}<span class="text-gray-400">Sin descripción</span>{% endif %}
-                </p>
-            </div>
+    <div class="flex items-center justify-between gap-3 mb-4">
 
+        <h3 class="text-base sm:text-lg font-bold">Detalle</h3>
+
+        {% if property.referencia %}
+        <span class="px-2.5 py-1 rounded-lg text-xs font-mono bg-gray-100 text-gray-600 border border-gray-200 whitespace-nowrap">
+            Ref. {{ property.referencia }}
+        </span>
+        {% endif %}
+
+    </div>
+
+    {% if features %}
+    <div class="flex flex-wrap gap-2 pb-4 mb-4 border-b border-gray-100">
+        {% for feature in features %}
+        <span class="px-2.5 py-1 rounded-lg text-xs sm:text-sm bg-gray-50 text-gray-700 border border-gray-200 whitespace-nowrap">
+            {{ feature }}
+        </span>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-4 sm:gap-x-6 gap-y-4">
+
+        {{ required_field("Cliente", property.client.name if property.client else None) }}
+        {{ required_field("Agente", property.agent.name if property.agent else None) }}
+
+        {{ field("Planta", property.planta) }}
+        {{ field("Estado del inmueble", property.estado_inmueble) }}
+        {{ field("Situación", property.situacion) }}
+        {{ field("Zona", property.zona) }}
+        {{ field("Cód. postal", property.cod_postal) }}
+        {{ field("País", property.pais) }}
+        {{ field("Código", property.codigo) }}
+        {{ field("Ref. catastral", property.ref_catastral) }}
+        {{ field("Llaves", property.llaves) }}
+        {{ field("Fecha de alta", property.fecha_alta.strftime('%d/%m/%Y') if property.fecha_alta else None) }}
+
+    </div>
+
+    <div class="mt-4 pt-4 border-t border-gray-100 space-y-4">
+
+        <div>
+            <p class="text-xs text-gray-500">Observaciones</p>
+            <p class="text-sm text-gray-700 whitespace-pre-line">
+                {% if property.description %}{{ property.description }}{% else %}<span class="text-gray-400">Sin observaciones</span>{% endif %}
+            </p>
         </div>
+
+        {% if property.mandato_acuerdo %}
+        <div>
+            <p class="text-xs text-gray-500">Mandato / Acuerdo</p>
+            <p class="text-sm text-gray-700 whitespace-pre-line">{{ property.mandato_acuerdo }}</p>
+        </div>
+        {% endif %}
 
     </div>
 

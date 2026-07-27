@@ -34,6 +34,7 @@ from pathlib import Path
 from app.services.property_metrics import PropertyMetricsService
 from app.services.report_generator import generate_property_report
 from app.web.utils.flash import set_flash
+from app.web.utils.property_form import extract_fields
 from app.web.dependencies.auth import is_admin, get_agent_from_user
 
 
@@ -126,6 +127,15 @@ async def create_property(
     db: Session = Depends(get_db)
 ):
 
+    # Campos replicados de la tabla externa de propiedades
+    form = await request.form()
+    external_fields, field_errors = extract_fields(form)
+
+    if field_errors:
+        response = RedirectResponse(url="/properties", status_code=302)
+        set_flash(response, "error", field_errors[0])
+        return response
+
     try:
         property_item = Property(
             title=title,
@@ -135,7 +145,8 @@ async def create_property(
             description=description,
             client_id=client_id,
             agent_id=agent_id,
-            status=PropertyStatus.ACTIVE
+            status=PropertyStatus.ACTIVE,
+            **external_fields
         )
 
         db.add(property_item)
@@ -161,6 +172,8 @@ async def update_property(
     client_id: int = Form(...),
     agent_id: int = Form(...),
     address: str = Form(...),
+    city: str = Form(...),
+    description: str = Form(""),
     status: str = Form(...),
     auto_send_report: bool = Form(False),
     report_frequency: str = Form(None),
@@ -177,6 +190,15 @@ async def update_property(
         )
         response = RedirectResponse(url="/properties", status_code=302)
         set_flash(response, "error", "Estado de propiedad inválido")
+        return response
+
+    # Campos replicados de la tabla externa de propiedades
+    form = await request.form()
+    external_fields, field_errors = extract_fields(form)
+
+    if field_errors:
+        response = RedirectResponse(url="/properties", status_code=302)
+        set_flash(response, "error", field_errors[0])
         return response
 
     property = db.query(Property).filter(
@@ -197,11 +219,16 @@ async def update_property(
         property.client_id = client_id
         property.agent_id = agent_id
         property.address = address
+        property.city = city
+        property.description = description
         property.status = status
         property.auto_send_report = auto_send_report
         property.report_frequency = report_frequency
         property.report_day = report_day
         property.report_hour = report_hour
+
+        for field, value in external_fields.items():
+            setattr(property, field, value)
 
         if old_price != price:
 

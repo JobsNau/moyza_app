@@ -16,8 +16,13 @@ PUBLIC_PATHS = [
     "/logout",
     "/docs",
     "/openapi.json",
-    "/redoc",
-    "/static"
+    "/redoc"
+]
+
+# Prefijos públicos: archivos estáticos servidos por StaticFiles
+PUBLIC_PREFIXES = [
+    "/static",
+    "/storage"
 ]
 
 
@@ -31,8 +36,12 @@ class AuthMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         # Rutas públicas
-        # if any(path.startswith(p) for p in PUBLIC_PATHS):
         if path in PUBLIC_PATHS:
+
+            return await call_next(request)
+
+        # Archivos estáticos (coinciden por prefijo, no por ruta exacta)
+        if any(path.startswith(p) for p in PUBLIC_PREFIXES):
 
             return await call_next(request)
 

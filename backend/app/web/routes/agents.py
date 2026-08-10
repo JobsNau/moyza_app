@@ -15,6 +15,7 @@ from fastapi.responses import RedirectResponse
 
 from fastapi.templating import Jinja2Templates
 
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.db.deps import get_db
@@ -52,10 +53,32 @@ async def agents_page(
 
     current_user = request.state.user
 
+    search = (request.query_params.get("search") or "").strip()
+
+    # Solo el admin ve el listado completo, así que solo él necesita buscador
+    can_search = is_admin(current_user)
+
     # Si es admin, mostrar todos los agentes
     # Si es agente, mostrar solo su propio perfil
-    if is_admin(current_user):
-        agents = db.query(Agent).all()
+    if can_search:
+
+        base_query = db.query(Agent)
+
+        if search:
+            pattern = f"%{search}%"
+            base_query = base_query.filter(
+                or_(
+                    Agent.name.ilike(pattern),
+                    Agent.email.ilike(pattern),
+                    Agent.dni.ilike(pattern),
+                    Agent.phone.ilike(pattern),
+                    Agent.zone.ilike(pattern),
+                    Agent.company.ilike(pattern)
+                )
+            )
+
+        agents = base_query.order_by(Agent.name).all()
+
     else:
         agent = get_agent_from_user(current_user, db)
         agents = [agent] if agent else []
@@ -67,7 +90,9 @@ async def agents_page(
             "request": request,
             "agents": agents,
             "current_user": current_user,
-            "error": error
+            "error": error,
+            "search": search,
+            "can_search": can_search
         }
     )
 

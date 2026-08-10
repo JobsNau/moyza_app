@@ -52,9 +52,13 @@
                     Estado
                 </th>
 
+                {% if can_manage %}
+
                 <th class="sticky top-0 z-10 bg-gray-50 px-3 sm:px-6 py-3 sm:py-4 text-right text-xs sm:text-sm font-semibold text-gray-600 whitespace-nowrap">
                     Acciones
                 </th>
+
+                {% endif %}
 
             </tr>
 
@@ -95,6 +99,8 @@
                     {% endif %}
 
                 </td>
+
+                {% if can_manage %}
 
                 <td class="px-3 sm:px-6 py-3 sm:py-4">
 
@@ -138,6 +144,8 @@
 
                 </td>
 
+                {% endif %}
+
             </tr>
 
             {% endfor %}
@@ -146,7 +154,7 @@
 
             <tr>
 
-                <td colspan="5" class="px-3 sm:px-6 py-8 text-center text-xs sm:text-sm text-gray-500">
+                <td colspan="{{ 5 if can_manage else 4 }}" class="px-3 sm:px-6 py-8 text-center text-xs sm:text-sm text-gray-500">
 
                     {% if search %}
                     No se encontraron clientes para "{{ search }}"

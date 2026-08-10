@@ -82,3 +82,28 @@ def get_agent_from_user(user: User, db: Session):
 def is_admin(user: User) -> bool:
     """Verifica si el usuario tiene rol de admin"""
     return user and user.role and user.role.name.lower() == 'admin'
+
+
+def deny_if_not_admin(request: Request, redirect_url: str):
+    """Bloquea acciones reservadas al admin.
+
+    Devuelve una redirección con flash de error cuando el usuario no es admin,
+    o None cuando sí lo es (la acción puede continuar). Se usa en los endpoints
+    POST para que ocultar el botón en la plantilla no sea la única protección.
+    """
+    from app.web.utils.flash import set_flash
+
+    user = getattr(request.state, "user", None)
+
+    if is_admin(user):
+        return None
+
+    response = RedirectResponse(url=redirect_url, status_code=302)
+
+    set_flash(
+        response,
+        "error",
+        "No tienes permisos para realizar esta acción."
+    )
+
+    return response

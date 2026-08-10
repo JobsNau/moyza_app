@@ -1,4 +1,6 @@
 from app.web.dependencies.auth import get_current_web_user
+from app.web.dependencies.auth import is_admin
+from app.web.dependencies.auth import deny_if_not_admin
 from app.models.user import User
 from app.models.client import Client
 from app.models.property import Property
@@ -42,6 +44,9 @@ async def clients_page(request: Request, db: Session = Depends(get_db)):
 
     error = request.query_params.get("error")
 
+    # Solo el admin puede crear, editar o eliminar clientes
+    can_manage = is_admin(current_user)
+
     return templates.TemplateResponse(
         request=request,
         name="clients/home.html",
@@ -50,7 +55,8 @@ async def clients_page(request: Request, db: Session = Depends(get_db)):
             "clients": clients,
             "current_user": current_user,
             "error": error,
-            "search": search
+            "search": search,
+            "can_manage": can_manage
         }
     )
 
@@ -62,6 +68,12 @@ async def create_client(
         email: str = Form(None),
         db: Session = Depends(get_db)
     ):
+
+    # Solo el admin puede crear clientes
+    denied = deny_if_not_admin(request, "/clients")
+
+    if denied:
+        return denied
 
     # El correo es opcional: una cadena vacía se guarda como NULL
     email = (email or "").strip() or None
@@ -104,6 +116,12 @@ async def update_client(
         db: Session = Depends(get_db)
     ):
 
+    # Solo el admin puede editar clientes
+    denied = deny_if_not_admin(request, "/clients")
+
+    if denied:
+        return denied
+
     # El correo es opcional: una cadena vacía se guarda como NULL
     email = (email or "").strip() or None
 
@@ -140,8 +158,16 @@ async def update_client(
 @router.post("/clients/delete/{client_id}")
 async def delete_client(
         client_id: int,
+        request: Request,
         db: Session = Depends(get_db)
     ):
+
+    # Solo el admin puede eliminar clientes
+    denied = deny_if_not_admin(request, "/clients")
+
+    if denied:
+        return denied
+
     properties = db.query(Property).filter(
         Property.client_id == client_id
     ).count()

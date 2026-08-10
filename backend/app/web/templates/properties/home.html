@@ -20,6 +20,8 @@ Propiedades
 
     </div>
 
+    {% if can_create %}
+
     <button
         onclick="openModal()"
         class="w-full sm:w-auto bg-black hover:bg-gray-800 text-white px-5 py-3 rounded-xl transition-colors font-medium flex items-center justify-center gap-2"
@@ -29,6 +31,8 @@ Propiedades
         </svg>
         <span>Nueva Propiedad</span>
     </button>
+
+    {% endif %}
 
 </div>
 

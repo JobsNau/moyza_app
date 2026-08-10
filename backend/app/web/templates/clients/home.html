@@ -102,6 +102,8 @@ Clientes
 
     </div>
 
+    {% if can_manage %}
+
     <button
         onclick="openModal()"
         class="w-full sm:w-auto bg-black hover:bg-gray-800 text-white px-4 sm:px-5 py-2 sm:py-3 rounded-xl transition-colors font-medium flex items-center justify-center gap-2 text-sm sm:text-base"
@@ -112,10 +114,16 @@ Clientes
         <span>Nuevo Cliente</span>
     </button>
 
+    {% endif %}
+
 </div>
 
 {% include 'clients/table.html' %}
 
+{% if can_manage %}
+
 {% include 'clients/form.html' %}
+
+{% endif %}
 
 {% endblock %}

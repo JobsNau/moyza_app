@@ -23,7 +23,7 @@ from app.db.deps import get_db
 from app.models.agent import Agent
 from app.models.property import Property
 
-from app.web.dependencies.auth import is_admin, get_agent_from_user
+from app.web.dependencies.auth import is_admin, get_agent_from_user, deny_if_not_admin
 
 
 router = APIRouter()
@@ -44,6 +44,18 @@ def _clean(value):
     return value or None
 
 
+def _can_edit_agent(request: Request, agent: Agent, db: Session) -> bool:
+    """El admin puede editar cualquier agente; el agente solo su propio perfil."""
+    current_user = getattr(request.state, "user", None)
+
+    if is_admin(current_user):
+        return True
+
+    own_agent = get_agent_from_user(current_user, db)
+
+    return bool(own_agent and own_agent.id == agent.id)
+
+
 @router.get("/agents", response_class=HTMLResponse)
 async def agents_page(
     request: Request,
@@ -56,11 +68,12 @@ async def agents_page(
     search = (request.query_params.get("search") or "").strip()
 
     # Solo el admin ve el listado completo, así que solo él necesita buscador
-    can_search = is_admin(current_user)
+    # y es el único que puede crear o eliminar agentes
+    can_manage = is_admin(current_user)
 
     # Si es admin, mostrar todos los agentes
     # Si es agente, mostrar solo su propio perfil
-    if can_search:
+    if can_manage:
 
         base_query = db.query(Agent)
 
@@ -92,7 +105,7 @@ async def agents_page(
             "current_user": current_user,
             "error": error,
             "search": search,
-            "can_search": can_search
+            "can_manage": can_manage
         }
     )
 
@@ -108,6 +121,12 @@ async def create_agent(
         company: str = Form(None),
         db: Session = Depends(get_db)
     ):
+
+    # Solo el admin puede crear agentes
+    denied = deny_if_not_admin(request, "/agents")
+
+    if denied:
+        return denied
 
     # Solo el nombre es obligatorio; el resto es opcional.
     # Se normaliza aquí para no depender de la validación de FastAPI, que
@@ -202,6 +221,10 @@ async def update_agent(
             status_code=302
         )
 
+    # El agente solo puede editar su propio perfil; el admin, cualquiera
+    if not _can_edit_agent(request, agent, db):
+        return deny_if_not_admin(request, "/agents")
+
     # El correo debe seguir siendo único entre agentes, cuando se indica
     if email:
 
@@ -243,8 +266,15 @@ async def update_agent(
 @router.post("/agents/delete/{agent_id}")
 async def delete_agent(
     agent_id: int,
+    request: Request,
     db: Session = Depends(get_db)
 ):
+
+    # Solo el admin puede eliminar agentes
+    denied = deny_if_not_admin(request, "/agents")
+
+    if denied:
+        return denied
 
     properties = db.query(Property).filter(
         Property.agent_id == agent_id
@@ -275,6 +305,7 @@ async def delete_agent(
 @router.post("/agents/{agent_id}/upload-signature")
 async def upload_agent_signature(
     agent_id: int,
+    request: Request,
     signature_data: str = Form(...),
     db: Session = Depends(get_db)
 ):
@@ -291,6 +322,10 @@ async def upload_agent_signature(
             url="/agents?error=agent_not_found",
             status_code=302
         )
+
+    # El agente solo puede firmar su propio perfil; el admin, cualquiera
+    if not _can_edit_agent(request, agent, db):
+        return deny_if_not_admin(request, "/agents")
 
     # Crear directorio de firmas si no existe
     signatures_dir = "storage/signatures/agents"

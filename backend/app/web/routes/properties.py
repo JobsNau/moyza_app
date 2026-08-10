@@ -35,7 +35,7 @@ from app.services.property_metrics import PropertyMetricsService
 from app.services.report_generator import generate_property_report
 from app.web.utils.flash import set_flash
 from app.web.utils.property_form import extract_fields
-from app.web.dependencies.auth import is_admin, get_agent_from_user
+from app.web.dependencies.auth import is_admin, get_agent_from_user, deny_if_not_admin
 
 
 router = APIRouter()
@@ -52,6 +52,10 @@ async def properties_page(
 ):
 
     current_user = request.state.user
+
+    # Solo el admin puede crear o eliminar propiedades
+    can_create = is_admin(current_user)
+    can_delete = can_create
 
     # Si es admin, mostrar todas las propiedades
     # Si es agente, mostrar solo sus propiedades
@@ -110,7 +114,9 @@ async def properties_page(
             "active_count": active_count,
             "paused_count": paused_count,
             "sold_count": sold_count,
-            "search": search
+            "search": search,
+            "can_create": can_create,
+            "can_delete": can_delete
         }
     )
 
@@ -126,6 +132,12 @@ async def create_property(
     agent_id: int = Form(...),
     db: Session = Depends(get_db)
 ):
+
+    # Solo el admin puede crear propiedades
+    denied = deny_if_not_admin(request, "/properties")
+
+    if denied:
+        return denied
 
     # Campos replicados de la tabla externa de propiedades
     form = await request.form()
@@ -274,6 +286,12 @@ async def delete_property(
     request: Request,
     db: Session = Depends(get_db)
 ):
+
+    # Solo el admin puede eliminar (archivar) propiedades
+    denied = deny_if_not_admin(request, "/properties")
+
+    if denied:
+        return denied
 
     property = db.query(Property).filter(
         Property.id == property_id

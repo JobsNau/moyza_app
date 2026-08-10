@@ -190,6 +190,8 @@
                         </svg>
                     </button>
 
+                    {% if can_delete %}
+
                     <form
                         action="/properties/delete/{{ property.id }}"
                         method="POST"
@@ -206,6 +208,8 @@
                             </svg>
                         </button>
                     </form>
+
+                    {% endif %}
 
                     <a
                         href="/properties/{{ property.id }}"

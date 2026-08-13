@@ -93,125 +93,22 @@
             </div>
         </div>
 
-        <!-- Tabs -->
-        <div class="border-b border-gray-200 mb-6">
-            <nav class="-mb-px flex gap-6" id="tabNav">
-                <button
-                    id="tab-buyers"
-                    onclick="switchTab('buyers')"
-                    class="tab-btn py-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-colors"
-                >
-                    <span class="flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                        </svg>
-                        Compradores
-                        {% if buyers is defined %}
-                        <span class="bg-gray-200 text-gray-700 text-xs px-2 py-0.5 rounded-full">{{ buyers|length }}</span>
-                        {% endif %}
-                    </span>
-                </button>
-                <button
-                    id="tab-alerts"
-                    onclick="switchTab('alerts')"
-                    class="tab-btn py-3 px-1 text-sm font-medium border-b-2 border-blue-600 text-blue-600 transition-colors"
-                >
-                    <span class="flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
-                        </svg>
-                        Alertas de Compradores
-                        <span class="bg-gray-200 text-gray-700 text-xs px-2 py-0.5 rounded-full">{{ alerts|length }}</span>
-                    </span>
-                </button>
-            </nav>
+        <!-- Sección: Alertas de Compradores -->
+        <div class="mb-8">
+        <div class="flex items-center gap-3 mb-4">
+            <h2 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                </svg>
+                Alertas de Compradores
+            </h2>
+            <span class="bg-gray-200 text-gray-700 text-xs px-2 py-0.5 rounded-full font-medium">{{ alerts|length }}</span>
         </div>
-
-        <!-- Tab: Compradores -->
-        <div id="panel-buyers" class="hidden">
-            <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
-                <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead class="bg-gray-50 border-b border-gray-200">
-                            <tr>
-                                <th class="text-left px-6 py-4 text-sm font-semibold text-gray-600">Nombre</th>
-                                <th class="text-left px-6 py-4 text-sm font-semibold text-gray-600">Teléfono</th>
-                                <th class="text-left px-6 py-4 text-sm font-semibold text-gray-600">Email</th>
-                                <th class="text-center px-6 py-4 text-sm font-semibold text-gray-600">Alertas</th>
-                                <th class="text-left px-6 py-4 text-sm font-semibold text-gray-600">Registrado</th>
-                                {% if request.state.user.role.name.lower() == 'admin' %}
-                                <th class="text-center px-6 py-4 text-sm font-semibold text-gray-600">Acciones</th>
-                                {% endif %}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% if buyers is defined and buyers %}
-                                {% for buyer in buyers %}
-                                <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                                    <td class="px-6 py-4 text-sm font-medium text-gray-800">
-                                        <a href="/buyers/{{ buyer.id }}" class="text-blue-600 hover:underline font-medium">
-                                            {{ buyer.name }}
-                                        </a>
-                                    </td>
-                                    <td class="px-6 py-4 text-sm text-gray-600">
-                                        {{ buyer.phone or '-' }}
-                                    </td>
-                                    <td class="px-6 py-4 text-sm text-gray-600">
-                                        {{ buyer.email or '-' }}
-                                    </td>
-                                    <td class="px-6 py-4 text-center">
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                                            {% if buyer.alerts|length > 0 %}bg-blue-100 text-blue-800{% else %}bg-gray-100 text-gray-600{% endif %}">
-                                            {{ buyer.alerts|length }}
-                                        </span>
-                                    </td>
-                                    <td class="px-6 py-4 text-sm text-gray-500">
-                                        {{ buyer.created_at.strftime('%d/%m/%Y') if buyer.created_at else '-' }}
-                                    </td>
-                                    {% if request.state.user.role.name.lower() == 'admin' %}
-                                    <td class="px-6 py-4 text-center">
-                                        <form method="POST" action="/buyers/{{ buyer.id }}/delete"
-                                              onsubmit="return confirm('¿Eliminar este comprador? También se eliminarán sus alertas.');"
-                                              class="inline">
-                                            <button type="submit"
-                                                class="bg-red-600 text-white px-3 py-1.5 rounded-lg hover:bg-red-700 transition-colors text-xs font-medium">
-                                                Eliminar
-                                            </button>
-                                        </form>
-                                    </td>
-                                    {% endif %}
-                                </tr>
-                                {% endfor %}
-                            {% else %}
-                                <tr>
-                                    <td colspan="6" class="px-6 py-12 text-center text-gray-500">
-                                        <div class="flex flex-col items-center gap-3">
-                                            <svg class="w-10 h-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                            </svg>
-                                            <p>No hay compradores registrados</p>
-                                            {% if request.state.user.role.name.lower() == 'admin' %}
-                                            <button onclick="openCreateBuyerModal()"
-                                                class="text-blue-600 hover:underline text-sm">
-                                                Crear el primero
-                                            </button>
-                                            {% endif %}
-                                        </div>
-                                    </td>
-                                </tr>
-                            {% endif %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Tab: Alertas -->
         <div id="panel-alerts">
             <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
-                <div class="overflow-x-auto">
+                <div class="overflow-x-auto max-h-[480px] overflow-y-auto">
                     <table class="w-full">
-                        <thead class="bg-gray-50 border-b border-gray-200">
+                        <thead class="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
                             <tr>
                                 <th class="text-left px-6 py-4 text-sm font-semibold text-gray-600">Propiedad</th>
                                 <th class="text-left px-6 py-4 text-sm font-semibold text-gray-600">Comprador</th>
@@ -342,6 +239,89 @@
                                 <tr>
                                     <td colspan="7" class="px-6 py-12 text-center text-gray-500">
                                         No hay alertas de compradores registradas
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        </div>
+
+        <!-- Sección: Compradores -->
+        <div class="mb-4">
+            <div class="flex items-center gap-3 mb-4">
+                <h2 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                    Compradores
+                </h2>
+                <span class="bg-gray-200 text-gray-700 text-xs px-2 py-0.5 rounded-full font-medium">{{ buyers|length }}</span>
+            </div>
+            <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+                <div class="overflow-x-auto max-h-[400px] overflow-y-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
+                            <tr>
+                                <th class="text-left px-6 py-4 text-sm font-semibold text-gray-600">Nombre</th>
+                                <th class="text-left px-6 py-4 text-sm font-semibold text-gray-600">Teléfono</th>
+                                <th class="text-left px-6 py-4 text-sm font-semibold text-gray-600">Email</th>
+                                <th class="text-center px-6 py-4 text-sm font-semibold text-gray-600">Alertas</th>
+                                <th class="text-left px-6 py-4 text-sm font-semibold text-gray-600">Registrado</th>
+                                {% if request.state.user.role.name.lower() == 'admin' %}
+                                <th class="text-center px-6 py-4 text-sm font-semibold text-gray-600">Acciones</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if buyers %}
+                                {% for buyer in buyers %}
+                                <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                    <td class="px-6 py-4 text-sm font-medium text-gray-800">
+                                        <a href="/buyers/{{ buyer.id }}" class="text-blue-600 hover:underline font-medium">
+                                            {{ buyer.name }}
+                                        </a>
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-600">{{ buyer.phone or '-' }}</td>
+                                    <td class="px-6 py-4 text-sm text-gray-600">{{ buyer.email or '-' }}</td>
+                                    <td class="px-6 py-4 text-center">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                            {% if buyer.alerts|length > 0 %}bg-blue-100 text-blue-800{% else %}bg-gray-100 text-gray-600{% endif %}">
+                                            {{ buyer.alerts|length }}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-500">
+                                        {{ buyer.created_at.strftime('%d/%m/%Y') if buyer.created_at else '-' }}
+                                    </td>
+                                    {% if request.state.user.role.name.lower() == 'admin' %}
+                                    <td class="px-6 py-4 text-center">
+                                        <form method="POST" action="/buyers/{{ buyer.id }}/delete"
+                                              onsubmit="return confirm('¿Eliminar este comprador? También se eliminarán sus alertas.');"
+                                              class="inline">
+                                            <button type="submit"
+                                                class="bg-red-600 text-white px-3 py-1.5 rounded-lg hover:bg-red-700 transition-colors text-xs font-medium">
+                                                Eliminar
+                                            </button>
+                                        </form>
+                                    </td>
+                                    {% endif %}
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                                        <div class="flex flex-col items-center gap-3">
+                                            <svg class="w-10 h-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                            </svg>
+                                            <p>No hay compradores registrados</p>
+                                            {% if request.state.user.role.name.lower() == 'admin' %}
+                                            <button onclick="openCreateBuyerModal()"
+                                                class="text-blue-600 hover:underline text-sm">Crear el primero</button>
+                                            {% endif %}
+                                        </div>
                                     </td>
                                 </tr>
                             {% endif %}
@@ -580,34 +560,6 @@
 </div>
 
 <script>
-// ---- Tabs ----
-function switchTab(tab) {
-    const panels = { buyers: document.getElementById('panel-buyers'), alerts: document.getElementById('panel-alerts') };
-    const buttons = { buyers: document.getElementById('tab-buyers'), alerts: document.getElementById('tab-alerts') };
-
-    Object.keys(panels).forEach(function (key) {
-        if (key === tab) {
-            panels[key].classList.remove('hidden');
-            buttons[key].classList.add('border-blue-600', 'text-blue-600');
-            buttons[key].classList.remove('border-transparent', 'text-gray-500');
-        } else {
-            panels[key].classList.add('hidden');
-            buttons[key].classList.remove('border-blue-600', 'text-blue-600');
-            buttons[key].classList.add('border-transparent', 'text-gray-500');
-        }
-    });
-
-    const url = new URL(window.location);
-    url.searchParams.set('tab', tab);
-    history.replaceState(null, '', url);
-}
-
-// Restaurar tab desde URL (por defecto: alerts)
-(function () {
-    const params = new URLSearchParams(window.location.search);
-    const tab = params.get('tab');
-    if (tab === 'buyers') switchTab('buyers');
-})();
 
 // ---- Modales ----
 function openCreateBuyerModal() {
@@ -693,6 +645,7 @@ function setBuyerMode(mode) {
 // ---- Autocompletado compradores ----
 (function () {
     const input = document.getElementById('buyerSearch');
+    if (!input) return;
     const hidden = document.getElementById('buyerIdHidden');
     const list = document.getElementById('buyerResults');
     const selected = document.getElementById('buyerSelected');
@@ -811,6 +764,7 @@ function setBuyerMode(mode) {
 // ---- Autocompletado propiedades ----
 (function () {
     const input = document.getElementById('propertySearch');
+    if (!input) return;
     const hidden = document.getElementById('propertyId');
     const list = document.getElementById('propertyResults');
     const selected = document.getElementById('propertySelected');
@@ -947,7 +901,7 @@ function setBuyerMode(mode) {
 <div id="filterAlertModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-xl max-w-3xl w-full max-h-[92vh] overflow-y-auto">
         <form method="POST" action="/buyers/create-with-criteria">
-            <d  iv class="p-6 border-b border-gray-200">
+            <div class="p-6 border-b border-gray-200">
                 <h2 class="text-xl font-bold text-gray-800">Agregar alerta con filtro</h2>
                 <p class="text-sm text-gray-500 mt-1">Registra el comprador y sus criterios de búsqueda. Al guardar verás las propiedades compatibles.</p>
             </div>

@@ -130,10 +130,8 @@ async def alerts_page(
     if is_admin(current_user):
         agents = db.query(Agent).all()
 
-    # Lista de compradores (solo admin)
-    buyers = []
-    if is_admin(current_user):
-        buyers = db.query(Buyer).order_by(Buyer.name.asc()).all()
+    # Lista de compradores (visible para todos)
+    buyers = db.query(Buyer).order_by(Buyer.name.asc()).all()
 
     # Valores para selectores del modal de criteria
     zones = [
@@ -1096,11 +1094,6 @@ async def buyer_detail(
 
     current_user = request.state.user
 
-    if not is_admin(current_user):
-        response = RedirectResponse(url="/alerts", status_code=302)
-        set_flash(response, "error", "Acceso no autorizado")
-        return response
-
     buyer = db.query(Buyer).filter(Buyer.id == buyer_id).first()
     if not buyer:
         response = RedirectResponse(url="/alerts?tab=buyers", status_code=302)
@@ -1150,6 +1143,7 @@ async def buyer_detail(
         context={
             "request": request,
             "current_user": current_user,
+            "is_admin": is_admin(current_user),
             "buyer": buyer,
             "criteria": criteria,
             "matching_properties": matching_properties,

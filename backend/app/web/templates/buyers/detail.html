@@ -112,6 +112,14 @@
 
         <!-- Panel: Perfil de búsqueda -->
         <div id="panel-criteria" class="{% if tab != 'criteria' and tab %}hidden{% endif %}">
+            {% if not is_admin %}
+            <div class="mb-4 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-700 flex items-center gap-2">
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                Vista de solo lectura. Solo los administradores pueden editar el perfil de búsqueda.
+            </div>
+            {% endif %}
             <form method="POST" action="/buyers/{{ buyer.id }}/search-criteria">
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
@@ -294,7 +302,8 @@
 
                 </div>
 
-                <!-- Botón guardar -->
+                <!-- Botón guardar (solo admin) -->
+                {% if is_admin %}
                 <div class="flex justify-end mt-6">
                     <button type="submit"
                         class="bg-blue-600 text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-2">
@@ -304,6 +313,7 @@
                         Guardar perfil y ver compatibles
                     </button>
                 </div>
+                {% endif %}
             </form>
         </div>
 
@@ -413,7 +423,8 @@
                             </a>
                         </div>
 
-                        <!-- Botón crear alerta -->
+                        <!-- Botón crear alerta (solo admin) -->
+                        {% if is_admin %}
                         <button
                             data-prop-id="{{ prop.id }}"
                             data-prop-title="{{ prop.title | e }}"
@@ -425,6 +436,7 @@
                             </svg>
                             Crear alerta
                         </button>
+                        {% endif %}
                     </div>
 
                     <!-- Agente de la propiedad -->

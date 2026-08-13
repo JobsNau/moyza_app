@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Alertas - MOYZA{% endblock %}
+{% block title %}Compradores - MOYZA{% endblock %}
 
 {% block content %}
 
@@ -11,20 +11,31 @@
         <!-- Header -->
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
             <div>
-                <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">Mis Alertas</h1>
-                <p class="text-gray-600 mt-1">Gestiona las notificaciones de interesados en propiedades</p>
+                <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">Compradores</h1>
+                <p class="text-gray-600 mt-1">Gestiona compradores y sus alertas de propiedades</p>
             </div>
 
             {% if request.state.user.role.name.lower() == 'admin' %}
-            <button
-                onclick="openCreateModal()"
-                class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-            >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                </svg>
-                Nueva Alerta
-            </button>
+            <div class="flex gap-2">
+                <button
+                    onclick="openCreateBuyerModal()"
+                    class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2 text-sm font-medium border border-gray-300"
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
+                    </svg>
+                    Nuevo Comprador
+                </button>
+                <button
+                    onclick="openCreateAlertModal()"
+                    class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm font-medium"
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    Agregar alerta de comprador
+                </button>
+            </div>
             {% endif %}
         </div>
 
@@ -73,146 +84,259 @@
             </div>
         </div>
 
-        <!-- Alerts Table -->
-        <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
-            <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead class="bg-gray-50 border-b border-gray-200">
-                        <tr>
-                            <th class="text-left px-6 py-4 text-sm font-semibold text-gray-600">Propiedad</th>
-                            <th class="text-left px-6 py-4 text-sm font-semibold text-gray-600">Interesado</th>
-                            <th class="text-left px-6 py-4 text-sm font-semibold text-gray-600">Origen</th>
-                            <th class="text-center px-6 py-4 text-sm font-semibold text-gray-600">Prioridad</th>
-                            <th class="text-center px-6 py-4 text-sm font-semibold text-gray-600">Estado</th>
-                            <th class="text-left px-6 py-4 text-sm font-semibold text-gray-600">Fecha</th>
-                            <th class="text-center px-6 py-4 text-sm font-semibold text-gray-600">Acciones</th>
-                        </tr>
-                    </thead>
+        <!-- Tabs -->
+        <div class="border-b border-gray-200 mb-6">
+            <nav class="-mb-px flex gap-6" id="tabNav">
+                <button
+                    id="tab-buyers"
+                    onclick="switchTab('buyers')"
+                    class="tab-btn py-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-colors"
+                >
+                    <span class="flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        </svg>
+                        Compradores
+                        {% if buyers is defined %}
+                        <span class="bg-gray-200 text-gray-700 text-xs px-2 py-0.5 rounded-full">{{ buyers|length }}</span>
+                        {% endif %}
+                    </span>
+                </button>
+                <button
+                    id="tab-alerts"
+                    onclick="switchTab('alerts')"
+                    class="tab-btn py-3 px-1 text-sm font-medium border-b-2 border-blue-600 text-blue-600 transition-colors"
+                >
+                    <span class="flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                        </svg>
+                        Alertas de Compradores
+                        <span class="bg-gray-200 text-gray-700 text-xs px-2 py-0.5 rounded-full">{{ alerts|length }}</span>
+                    </span>
+                </button>
+            </nav>
+        </div>
 
-                    <tbody>
-                        {% if alerts %}
-                            {% for alert in alerts %}
-                            {% set is_locked = not is_admin and active_alert_id and alert.id != active_alert_id and alert.status in [AlertStatus.PENDING, AlertStatus.IN_PROGRESS] %}
-                            <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors {% if is_locked %}opacity-60{% elif not alert.read_at %}bg-blue-50{% endif %}">
-                                <td class="px-6 py-4 text-sm text-gray-700">
-                                    <div class="flex flex-col">
-                                        <span class="font-medium">{{ alert.property.title }}</span>
-                                        <span class="text-xs text-gray-500">{{ alert.property.address }}</span>
-                                    </div>
-                                </td>
-
-                                <td class="px-6 py-4 text-sm text-gray-700">
-                                    <div class="flex flex-col">
-                                        <span class="font-medium">{{ alert.lead_name }}</span>
-                                        {% if alert.lead_phone %}
-                                        <span class="text-xs text-gray-500">{{ alert.lead_phone }}</span>
-                                        {% endif %}
-                                    </div>
-                                </td>
-
-                                <td class="px-6 py-4 text-sm text-gray-600">
-                                    {{ alert.source or '-' }}
-                                </td>
-
-                                <td class="px-6 py-4 text-center">
-                                    {% if alert.priority == AlertPriority.ALTA %}
-                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                        Alta
-                                    </span>
-                                    {% elif alert.priority == AlertPriority.NORMAL %}
-                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                        Normal
-                                    </span>
-                                    {% else %}
-                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                        Baja
-                                    </span>
-                                    {% endif %}
-                                </td>
-
-                                <td class="px-6 py-4 text-center">
-                                    {% if is_locked %}
-                                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-gray-200 text-gray-600">
-                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
-                                        </svg>
-                                        En cola
-                                    </span>
-                                    {% elif alert.status == AlertStatus.PENDING %}
-                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                        Pendiente
-                                    </span>
-                                    {% elif alert.status == AlertStatus.IN_PROGRESS %}
-                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                        En Proceso
-                                    </span>
-                                    {% elif alert.status == AlertStatus.COMPLETED %}
-                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                        Completada
-                                    </span>
-                                    {% else %}
-                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                        {{ alert.status }}
-                                    </span>
-                                    {% endif %}
-                                </td>
-
-                                <td class="px-6 py-4 text-sm text-gray-600">
-                                    {{ alert.created_at.strftime('%d/%m/%Y %H:%M') if alert.created_at else '-' }}
-                                </td>
-
-                                <td class="px-6 py-4 text-center">
-                                    <div class="flex items-center justify-center gap-2">
-                                        {% if is_locked %}
-                                        <span
-                                            title="Completa tu alerta activa para desbloquear esta"
-                                            class="bg-gray-200 text-gray-500 px-4 py-2 rounded-lg text-sm font-medium cursor-not-allowed"
-                                        >
-                                            Bloqueada
+        <!-- Tab: Compradores -->
+        <div id="panel-buyers" class="hidden">
+            <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50 border-b border-gray-200">
+                            <tr>
+                                <th class="text-left px-6 py-4 text-sm font-semibold text-gray-600">Nombre</th>
+                                <th class="text-left px-6 py-4 text-sm font-semibold text-gray-600">Teléfono</th>
+                                <th class="text-left px-6 py-4 text-sm font-semibold text-gray-600">Email</th>
+                                <th class="text-center px-6 py-4 text-sm font-semibold text-gray-600">Alertas</th>
+                                <th class="text-left px-6 py-4 text-sm font-semibold text-gray-600">Registrado</th>
+                                {% if request.state.user.role.name.lower() == 'admin' %}
+                                <th class="text-center px-6 py-4 text-sm font-semibold text-gray-600">Acciones</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if buyers is defined and buyers %}
+                                {% for buyer in buyers %}
+                                <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                    <td class="px-6 py-4 text-sm font-medium text-gray-800">
+                                        {{ buyer.name }}
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-600">
+                                        {{ buyer.phone or '-' }}
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-600">
+                                        {{ buyer.email or '-' }}
+                                    </td>
+                                    <td class="px-6 py-4 text-center">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                            {% if buyer.alerts|length > 0 %}bg-blue-100 text-blue-800{% else %}bg-gray-100 text-gray-600{% endif %}">
+                                            {{ buyer.alerts|length }}
                                         </span>
-                                        {% else %}
-                                        <a
-                                            href="/alerts/{{ alert.id }}"
-                                            class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                                        >
-                                            Ver Detalle
-                                        </a>
-                                        {% endif %}
-
-                                        {% if is_admin and alert.status == AlertStatus.COMPLETED %}
-                                        <form method="POST" action="/alerts/{{ alert.id }}/reactivate" onsubmit="return confirm('¿Reactivar esta alerta? Volverá a la cola del agente.');" class="inline">
-                                            <button
-                                                type="submit"
-                                                class="bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition-colors text-sm font-medium"
-                                            >
-                                                Reactivar
-                                            </button>
-                                        </form>
-                                        {% endif %}
-
-                                        {% if request.state.user.role.name.lower() == 'admin' %}
-                                        <form method="POST" action="/alerts/{{ alert.id }}/delete" onsubmit="return confirm('¿Estás seguro de eliminar esta alerta?');" class="inline">
-                                            <button
-                                                type="submit"
-                                                class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
-                                            >
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-500">
+                                        {{ buyer.created_at.strftime('%d/%m/%Y') if buyer.created_at else '-' }}
+                                    </td>
+                                    {% if request.state.user.role.name.lower() == 'admin' %}
+                                    <td class="px-6 py-4 text-center">
+                                        <form method="POST" action="/buyers/{{ buyer.id }}/delete"
+                                              onsubmit="return confirm('¿Eliminar este comprador? También se eliminarán sus alertas.');"
+                                              class="inline">
+                                            <button type="submit"
+                                                class="bg-red-600 text-white px-3 py-1.5 rounded-lg hover:bg-red-700 transition-colors text-xs font-medium">
                                                 Eliminar
                                             </button>
                                         </form>
-                                        {% endif %}
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        {% else %}
+                                    </td>
+                                    {% endif %}
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                                        <div class="flex flex-col items-center gap-3">
+                                            <svg class="w-10 h-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                            </svg>
+                                            <p>No hay compradores registrados</p>
+                                            {% if request.state.user.role.name.lower() == 'admin' %}
+                                            <button onclick="openCreateBuyerModal()"
+                                                class="text-blue-600 hover:underline text-sm">
+                                                Crear el primero
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Alertas -->
+        <div id="panel-alerts">
+            <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50 border-b border-gray-200">
                             <tr>
-                                <td colspan="7" class="px-6 py-12 text-center text-gray-500">
-                                    No hay alertas registradas
-                                </td>
+                                <th class="text-left px-6 py-4 text-sm font-semibold text-gray-600">Propiedad</th>
+                                <th class="text-left px-6 py-4 text-sm font-semibold text-gray-600">Comprador</th>
+                                <th class="text-left px-6 py-4 text-sm font-semibold text-gray-600">Origen</th>
+                                <th class="text-center px-6 py-4 text-sm font-semibold text-gray-600">Prioridad</th>
+                                <th class="text-center px-6 py-4 text-sm font-semibold text-gray-600">Estado</th>
+                                <th class="text-left px-6 py-4 text-sm font-semibold text-gray-600">Fecha</th>
+                                <th class="text-center px-6 py-4 text-sm font-semibold text-gray-600">Acciones</th>
                             </tr>
-                        {% endif %}
-                    </tbody>
-                </table>
+                        </thead>
+
+                        <tbody>
+                            {% if alerts %}
+                                {% for alert in alerts %}
+                                {% set is_locked = not is_admin and active_alert_id and alert.id != active_alert_id and alert.status in [AlertStatus.PENDING, AlertStatus.IN_PROGRESS] %}
+                                <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors {% if is_locked %}opacity-60{% elif not alert.read_at %}bg-blue-50{% endif %}">
+                                    <td class="px-6 py-4 text-sm text-gray-700">
+                                        <div class="flex flex-col">
+                                            <span class="font-medium">{{ alert.property.title }}</span>
+                                            <span class="text-xs text-gray-500">{{ alert.property.address }}</span>
+                                        </div>
+                                    </td>
+
+                                    <td class="px-6 py-4 text-sm text-gray-700">
+                                        <div class="flex flex-col">
+                                            <span class="font-medium">{{ alert.lead_name }}</span>
+                                            {% if alert.lead_phone %}
+                                            <span class="text-xs text-gray-500">{{ alert.lead_phone }}</span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+
+                                    <td class="px-6 py-4 text-sm text-gray-600">
+                                        {{ alert.source or '-' }}
+                                    </td>
+
+                                    <td class="px-6 py-4 text-center">
+                                        {% if alert.priority == AlertPriority.ALTA %}
+                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                            Alta
+                                        </span>
+                                        {% elif alert.priority == AlertPriority.NORMAL %}
+                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                            Normal
+                                        </span>
+                                        {% else %}
+                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                            Baja
+                                        </span>
+                                        {% endif %}
+                                    </td>
+
+                                    <td class="px-6 py-4 text-center">
+                                        {% if is_locked %}
+                                        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-gray-200 text-gray-600">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                                            </svg>
+                                            En cola
+                                        </span>
+                                        {% elif alert.status == AlertStatus.PENDING %}
+                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                            Pendiente
+                                        </span>
+                                        {% elif alert.status == AlertStatus.IN_PROGRESS %}
+                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                            En Proceso
+                                        </span>
+                                        {% elif alert.status == AlertStatus.COMPLETED %}
+                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            Completada
+                                        </span>
+                                        {% else %}
+                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                            {{ alert.status }}
+                                        </span>
+                                        {% endif %}
+                                    </td>
+
+                                    <td class="px-6 py-4 text-sm text-gray-600">
+                                        {{ alert.created_at.strftime('%d/%m/%Y %H:%M') if alert.created_at else '-' }}
+                                    </td>
+
+                                    <td class="px-6 py-4 text-center">
+                                        <div class="flex items-center justify-center gap-2">
+                                            {% if is_locked %}
+                                            <span
+                                                title="Completa tu alerta activa para desbloquear esta"
+                                                class="bg-gray-200 text-gray-500 px-4 py-2 rounded-lg text-sm font-medium cursor-not-allowed"
+                                            >
+                                                Bloqueada
+                                            </span>
+                                            {% else %}
+                                            <a
+                                                href="/alerts/{{ alert.id }}"
+                                                class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                                            >
+                                                Ver Detalle
+                                            </a>
+                                            {% endif %}
+
+                                            {% if is_admin and alert.status == AlertStatus.COMPLETED %}
+                                            <form method="POST" action="/alerts/{{ alert.id }}/reactivate" onsubmit="return confirm('¿Reactivar esta alerta? Volverá a la cola del agente.');" class="inline">
+                                                <button
+                                                    type="submit"
+                                                    class="bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition-colors text-sm font-medium"
+                                                >
+                                                    Reactivar
+                                                </button>
+                                            </form>
+                                            {% endif %}
+
+                                            {% if request.state.user.role.name.lower() == 'admin' %}
+                                            <form method="POST" action="/alerts/{{ alert.id }}/delete" onsubmit="return confirm('¿Estás seguro de eliminar esta alerta?');" class="inline">
+                                                <button
+                                                    type="submit"
+                                                    class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+                                                >
+                                                    Eliminar
+                                                </button>
+                                            </form>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="7" class="px-6 py-12 text-center text-gray-500">
+                                        No hay alertas de compradores registradas
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -221,21 +345,152 @@
 </div>
 
 {% if request.state.user.role.name.lower() == 'admin' %}
-<!-- Modal Crear Alerta -->
-<div id="createModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <form method="POST" action="/alerts/create" id="createAlertForm">
+
+<!-- Modal: Nuevo Comprador -->
+<div id="createBuyerModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full">
+        <form method="POST" action="/buyers/create">
             <div class="p-6 border-b border-gray-200">
-                <h2 class="text-2xl font-bold text-gray-800">Nueva Alerta</h2>
+                <h2 class="text-xl font-bold text-gray-800">Nuevo Comprador</h2>
+                <p class="text-sm text-gray-500 mt-1">Registra un comprador sin asociar a una alerta</p>
             </div>
 
             <div class="p-6 space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Nombre <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" name="name" required
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Teléfono</label>
+                        <input type="tel" name="phone"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                        <input type="email" name="email"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Notas</label>
+                    <textarea name="notes" rows="2"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></textarea>
+                </div>
+            </div>
+
+            <div class="p-6 border-t border-gray-200 flex gap-3 justify-end">
+                <button type="button" onclick="closeCreateBuyerModal()"
+                    class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                    Cancelar
+                </button>
+                <button type="submit"
+                    class="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
+                    Crear Comprador
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Agregar Alerta de Comprador -->
+<div id="createAlertModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <form method="POST" action="/alerts/create" id="createAlertForm">
+            <div class="p-6 border-b border-gray-200">
+                <h2 class="text-2xl font-bold text-gray-800">Agregar alerta de comprador</h2>
+            </div>
+
+            <div class="p-6 space-y-5">
+
+                <!-- Sección Comprador -->
+                <div class="bg-gray-50 rounded-xl p-4 space-y-4">
+                    <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Comprador</h3>
+
+                    <!-- Toggle existente / nuevo -->
+                    <div class="flex gap-3">
+                        <button
+                            type="button"
+                            id="btnBuyerExisting"
+                            onclick="setBuyerMode('existing')"
+                            class="flex-1 py-2 px-3 rounded-lg border-2 border-blue-600 bg-blue-600 text-white text-sm font-medium transition-colors"
+                        >
+                            Comprador existente
+                        </button>
+                        <button
+                            type="button"
+                            id="btnBuyerNew"
+                            onclick="setBuyerMode('new')"
+                            class="flex-1 py-2 px-3 rounded-lg border-2 border-gray-200 bg-white text-gray-600 text-sm font-medium transition-colors hover:border-gray-300"
+                        >
+                            Nuevo comprador
+                        </button>
+                    </div>
+
+                    <!-- Panel: Comprador existente -->
+                    <div id="panelBuyerExisting">
+                        <div class="relative">
+                            <input
+                                type="text"
+                                id="buyerSearch"
+                                autocomplete="off"
+                                placeholder="Buscar por nombre, teléfono o email..."
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                            >
+                            <input type="hidden" name="buyer_id" id="buyerIdHidden">
+
+                            <!-- Comprador seleccionado -->
+                            <div id="buyerSelected" class="hidden mt-2 flex items-start justify-between gap-3 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+                                <div class="text-sm">
+                                    <p class="font-medium text-gray-800" id="buyerSelectedName"></p>
+                                    <p class="text-xs text-gray-600" id="buyerSelectedMeta"></p>
+                                </div>
+                                <button type="button" onclick="clearBuyerSelection()"
+                                    class="text-gray-400 hover:text-gray-600 shrink-0">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <ul id="buyerResults"
+                                class="hidden absolute z-10 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Panel: Nuevo comprador -->
+                    <div id="panelBuyerNew" class="hidden space-y-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Nombre <span class="text-red-500">*</span>
+                            </label>
+                            <input type="text" name="buyer_name" id="buyerNameInput"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                                <input type="tel" name="buyer_phone"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                <input type="email" name="buyer_email"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Propiedad -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
                         Propiedad <span class="text-red-500">*</span>
                     </label>
-
-                    <!-- Autocompletado: escribe para buscar, el id real va en el hidden -->
                     <div class="relative">
                         <input
                             type="text"
@@ -246,53 +501,30 @@
                         >
                         <input type="hidden" name="property_id" id="propertyId" required>
 
-                        <!-- Propiedad seleccionada -->
                         <div id="propertySelected" class="hidden mt-2 flex items-start justify-between gap-3 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
                             <div class="text-sm">
                                 <p class="font-medium text-gray-800" id="propertySelectedTitle"></p>
                                 <p class="text-xs text-gray-600" id="propertySelectedMeta"></p>
                             </div>
-                            <button
-                                type="button"
-                                onclick="clearPropertySelection()"
-                                class="text-gray-400 hover:text-gray-600 shrink-0"
-                                aria-label="Quitar selección"
-                            >
+                            <button type="button" onclick="clearPropertySelection()"
+                                class="text-gray-400 hover:text-gray-600 shrink-0">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                                 </svg>
                             </button>
                         </div>
 
-                        <!-- Sugerencias -->
-                        <ul
-                            id="propertyResults"
-                            class="hidden absolute z-10 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
-                        ></ul>
+                        <ul id="propertyResults"
+                            class="hidden absolute z-10 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                        </ul>
                     </div>
                 </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Nombre del Interesado</label>
-                    <input type="text" name="lead_name" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Teléfono <span class="text-red-500">*</span>
-                        </label>
-                        <input type="tel" name="lead_phone" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                        <input type="email" name="lead_email" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                    </div>
-                </div>
-
+                <!-- Origen -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Origen / Portal</label>
-                    <input type="text" name="source" placeholder="Ej: Idealista, Fotocasa, Web, Llamada" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <input type="text" name="source" placeholder="Ej: Idealista, Fotocasa, Web, Llamada"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
@@ -317,22 +549,18 @@
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Mensaje / Notas</label>
-                    <textarea name="message" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></textarea>
+                    <textarea name="message" rows="3"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></textarea>
                 </div>
             </div>
 
             <div class="p-6 border-t border-gray-200 flex gap-3 justify-end">
-                <button
-                    type="button"
-                    onclick="closeCreateModal()"
-                    class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                >
+                <button type="button" onclick="closeCreateAlertModal()"
+                    class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
                     Cancelar
                 </button>
-                <button
-                    type="submit"
-                    class="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
-                >
+                <button type="submit"
+                    class="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
                     Crear Alerta
                 </button>
             </div>
@@ -341,16 +569,201 @@
 </div>
 
 <script>
-function openCreateModal() {
-    document.getElementById('createModal').classList.remove('hidden');
-    document.getElementById('propertySearch').focus();
+// ---- Tabs ----
+function switchTab(tab) {
+    const panels = { buyers: document.getElementById('panel-buyers'), alerts: document.getElementById('panel-alerts') };
+    const buttons = { buyers: document.getElementById('tab-buyers'), alerts: document.getElementById('tab-alerts') };
+
+    Object.keys(panels).forEach(function (key) {
+        if (key === tab) {
+            panels[key].classList.remove('hidden');
+            buttons[key].classList.add('border-blue-600', 'text-blue-600');
+            buttons[key].classList.remove('border-transparent', 'text-gray-500');
+        } else {
+            panels[key].classList.add('hidden');
+            buttons[key].classList.remove('border-blue-600', 'text-blue-600');
+            buttons[key].classList.add('border-transparent', 'text-gray-500');
+        }
+    });
+
+    const url = new URL(window.location);
+    url.searchParams.set('tab', tab);
+    history.replaceState(null, '', url);
 }
 
-function closeCreateModal() {
-    document.getElementById('createModal').classList.add('hidden');
+// Restaurar tab desde URL (por defecto: alerts)
+(function () {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab === 'buyers') switchTab('buyers');
+})();
+
+// ---- Modales ----
+function openCreateBuyerModal() {
+    document.getElementById('createBuyerModal').classList.remove('hidden');
+}
+function closeCreateBuyerModal() {
+    document.getElementById('createBuyerModal').classList.add('hidden');
+}
+function openCreateAlertModal() {
+    document.getElementById('createAlertModal').classList.remove('hidden');
+    document.getElementById('buyerSearch').focus();
+}
+function closeCreateAlertModal() {
+    document.getElementById('createAlertModal').classList.add('hidden');
 }
 
-// --- Autocompletado de propiedades ---
+// ---- Modo comprador (existente / nuevo) ----
+var currentBuyerMode = 'existing';
+
+function setBuyerMode(mode) {
+    currentBuyerMode = mode;
+
+    const btnExisting = document.getElementById('btnBuyerExisting');
+    const btnNew = document.getElementById('btnBuyerNew');
+    const panelExisting = document.getElementById('panelBuyerExisting');
+    const panelNew = document.getElementById('panelBuyerNew');
+    const buyerNameInput = document.getElementById('buyerNameInput');
+
+    if (mode === 'existing') {
+        btnExisting.classList.add('border-blue-600', 'bg-blue-600', 'text-white');
+        btnExisting.classList.remove('border-gray-200', 'bg-white', 'text-gray-600');
+        btnNew.classList.remove('border-blue-600', 'bg-blue-600', 'text-white');
+        btnNew.classList.add('border-gray-200', 'bg-white', 'text-gray-600');
+        panelExisting.classList.remove('hidden');
+        panelNew.classList.add('hidden');
+        buyerNameInput.removeAttribute('required');
+    } else {
+        btnNew.classList.add('border-blue-600', 'bg-blue-600', 'text-white');
+        btnNew.classList.remove('border-gray-200', 'bg-white', 'text-gray-600');
+        btnExisting.classList.remove('border-blue-600', 'bg-blue-600', 'text-white');
+        btnExisting.classList.add('border-gray-200', 'bg-white', 'text-gray-600');
+        panelNew.classList.remove('hidden');
+        panelExisting.classList.add('hidden');
+        buyerNameInput.setAttribute('required', 'required');
+        clearBuyerSelection();
+    }
+}
+
+// ---- Autocompletado compradores ----
+(function () {
+    const input = document.getElementById('buyerSearch');
+    const hidden = document.getElementById('buyerIdHidden');
+    const list = document.getElementById('buyerResults');
+    const selected = document.getElementById('buyerSelected');
+    const selectedName = document.getElementById('buyerSelectedName');
+    const selectedMeta = document.getElementById('buyerSelectedMeta');
+
+    let timer = null;
+    let items = [];
+    let activeIndex = -1;
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function hideResults() {
+        list.classList.add('hidden');
+        list.innerHTML = '';
+        items = [];
+        activeIndex = -1;
+    }
+
+    function showMessage(text) {
+        list.innerHTML = '<li class="px-4 py-3 text-sm text-gray-500">' + escapeHtml(text) + '</li>';
+        list.classList.remove('hidden');
+        items = [];
+    }
+
+    function renderResults(results) {
+        items = results;
+        activeIndex = -1;
+
+        if (!results.length) {
+            showMessage('Sin coincidencias');
+            return;
+        }
+
+        list.innerHTML = results.map(function (b, i) {
+            const meta = [b.phone, b.email].filter(Boolean).join(' · ');
+            return '<li data-index="' + i + '" class="buyer-option px-4 py-2 cursor-pointer hover:bg-blue-50 border-b border-gray-100 last:border-0">'
+                + '<p class="text-sm font-medium text-gray-800">' + escapeHtml(b.name) + '</p>'
+                + (meta ? '<p class="text-xs text-gray-500">' + escapeHtml(meta) + '</p>' : '')
+                + '</li>';
+        }).join('');
+
+        list.classList.remove('hidden');
+    }
+
+    function highlight(index) {
+        list.querySelectorAll('.buyer-option').forEach(function (el, i) {
+            el.classList.toggle('bg-blue-50', i === index);
+        });
+    }
+
+    function selectBuyer(buyer) {
+        hidden.value = buyer.id;
+        input.value = '';
+        input.classList.add('hidden');
+
+        selectedName.textContent = buyer.name;
+        selectedMeta.textContent = [buyer.phone, buyer.email].filter(Boolean).join(' · ');
+        selected.classList.remove('hidden');
+
+        hideResults();
+    }
+
+    window.clearBuyerSelection = function () {
+        hidden.value = '';
+        selected.classList.add('hidden');
+        input.classList.remove('hidden');
+        input.value = '';
+        if (currentBuyerMode === 'existing') input.focus();
+    };
+
+    input.addEventListener('input', function () {
+        const term = input.value.trim();
+        clearTimeout(timer);
+        if (term.length < 2) { hideResults(); return; }
+        timer = setTimeout(function () {
+            fetch('/alerts/search-buyers?q=' + encodeURIComponent(term))
+                .then(function (r) { return r.ok ? r.json() : { results: [] }; })
+                .then(function (data) { renderResults(data.results || []); })
+                .catch(function () { showMessage('No se pudo buscar. Intenta de nuevo.'); });
+        }, 250);
+    });
+
+    input.addEventListener('keydown', function (e) {
+        if (list.classList.contains('hidden') || !items.length) return;
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            activeIndex = (activeIndex + 1) % items.length;
+            highlight(activeIndex);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            activeIndex = activeIndex <= 0 ? items.length - 1 : activeIndex - 1;
+            highlight(activeIndex);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (activeIndex >= 0) selectBuyer(items[activeIndex]);
+        } else if (e.key === 'Escape') {
+            hideResults();
+        }
+    });
+
+    list.addEventListener('click', function (e) {
+        const option = e.target.closest('.buyer-option');
+        if (option) selectBuyer(items[Number(option.dataset.index)]);
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!list.contains(e.target) && e.target !== input) hideResults();
+    });
+})();
+
+// ---- Autocompletado propiedades ----
 (function () {
     const input = document.getElementById('propertySearch');
     const hidden = document.getElementById('propertyId');
@@ -381,50 +794,38 @@ function closeCreateModal() {
         list.innerHTML = '<li class="px-4 py-3 text-sm text-gray-500">' + escapeHtml(text) + '</li>';
         list.classList.remove('hidden');
         items = [];
-        activeIndex = -1;
     }
 
     function renderResults(results) {
         items = results;
         activeIndex = -1;
-
-        if (!results.length) {
-            showMessage('Sin coincidencias');
-            return;
-        }
-
+        if (!results.length) { showMessage('Sin coincidencias'); return; }
         list.innerHTML = results.map(function (p, i) {
             const meta = [p.address, p.city].filter(Boolean).join(' · ');
-            return ''
-                + '<li data-index="' + i + '" class="property-option px-4 py-2 cursor-pointer hover:bg-blue-50 border-b border-gray-100 last:border-0">'
-                +   '<p class="text-sm font-medium text-gray-800">' + escapeHtml(p.title) + '</p>'
-                +   (meta ? '<p class="text-xs text-gray-500">' + escapeHtml(meta) + '</p>' : '')
-                +   (p.agent ? '<p class="text-xs text-gray-400">Agente: ' + escapeHtml(p.agent) + '</p>' : '')
+            return '<li data-index="' + i + '" class="property-option px-4 py-2 cursor-pointer hover:bg-blue-50 border-b border-gray-100 last:border-0">'
+                + '<p class="text-sm font-medium text-gray-800">' + escapeHtml(p.title) + '</p>'
+                + (meta ? '<p class="text-xs text-gray-500">' + escapeHtml(meta) + '</p>' : '')
+                + (p.agent ? '<p class="text-xs text-gray-400">Agente: ' + escapeHtml(p.agent) + '</p>' : '')
                 + '</li>';
         }).join('');
-
         list.classList.remove('hidden');
     }
 
     function highlight(index) {
-        const options = list.querySelectorAll('.property-option');
-        options.forEach(function (el, i) {
+        list.querySelectorAll('.property-option').forEach(function (el, i) {
             el.classList.toggle('bg-blue-50', i === index);
         });
-        if (options[index]) {
-            options[index].scrollIntoView({ block: 'nearest' });
-        }
+        const options = list.querySelectorAll('.property-option');
+        if (options[index]) options[index].scrollIntoView({ block: 'nearest' });
     }
 
     function selectProperty(property) {
         hidden.value = property.id;
         input.value = '';
         input.classList.add('hidden');
-
         selectedTitle.textContent = property.title;
         selectedMeta.textContent = [property.address, property.city].filter(Boolean).join(' · ');
         selected.classList.remove('hidden');
-
         hideResults();
     }
 
@@ -438,14 +839,8 @@ function closeCreateModal() {
 
     input.addEventListener('input', function () {
         const term = input.value.trim();
-
         clearTimeout(timer);
-
-        if (term.length < 2) {
-            hideResults();
-            return;
-        }
-
+        if (term.length < 2) { hideResults(); return; }
         timer = setTimeout(function () {
             fetch('/alerts/search-properties?q=' + encodeURIComponent(term))
                 .then(function (r) { return r.ok ? r.json() : { results: [] }; })
@@ -455,10 +850,7 @@ function closeCreateModal() {
     });
 
     input.addEventListener('keydown', function (e) {
-        if (list.classList.contains('hidden') || !items.length) {
-            return;
-        }
-
+        if (list.classList.contains('hidden') || !items.length) return;
         if (e.key === 'ArrowDown') {
             e.preventDefault();
             activeIndex = (activeIndex + 1) % items.length;
@@ -468,11 +860,8 @@ function closeCreateModal() {
             activeIndex = activeIndex <= 0 ? items.length - 1 : activeIndex - 1;
             highlight(activeIndex);
         } else if (e.key === 'Enter') {
-            // Evita enviar el formulario al elegir con Enter
             e.preventDefault();
-            if (activeIndex >= 0) {
-                selectProperty(items[activeIndex]);
-            }
+            if (activeIndex >= 0) selectProperty(items[activeIndex]);
         } else if (e.key === 'Escape') {
             hideResults();
         }
@@ -480,24 +869,31 @@ function closeCreateModal() {
 
     list.addEventListener('click', function (e) {
         const option = e.target.closest('.property-option');
-        if (option) {
-            selectProperty(items[Number(option.dataset.index)]);
-        }
+        if (option) selectProperty(items[Number(option.dataset.index)]);
     });
 
     document.addEventListener('click', function (e) {
-        if (!list.contains(e.target) && e.target !== input) {
-            hideResults();
-        }
+        if (!list.contains(e.target) && e.target !== input) hideResults();
     });
 
-    // El hidden con required no dispara mensaje nativo al estar oculto
+    // Validar que se seleccionó una propiedad y un comprador antes de enviar
     form.addEventListener('submit', function (e) {
         if (!hidden.value) {
             e.preventDefault();
             input.classList.remove('hidden');
             input.focus();
             showMessage('Selecciona una propiedad de la lista');
+            return;
+        }
+
+        const buyerHidden = document.getElementById('buyerIdHidden');
+        const buyerNameInput = document.getElementById('buyerNameInput');
+
+        if (currentBuyerMode === 'existing' && !buyerHidden.value) {
+            e.preventDefault();
+            document.getElementById('buyerSearch').classList.remove('hidden');
+            document.getElementById('buyerSearch').focus();
+            alert('Selecciona un comprador de la lista o cambia a "Nuevo comprador"');
         }
     });
 })();

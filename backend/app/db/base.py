@@ -19,3 +19,4 @@ from app.models.report_job_log import ReportJobLog
 from app.models.ai_analysis_log import AIAnalysisLog
 from app.models.property_alert import PropertyAlert
 from app.models.alert_follow_up import AlertFollowUp
+from app.models.buyer import Buyer

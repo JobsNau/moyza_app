@@ -26,6 +26,7 @@ from app.models.alert_follow_up import AlertFollowUp
 from app.models.property import Property
 from app.models.agent import Agent
 from app.models.user import User
+from app.models.buyer import Buyer
 
 from app.web.utils.flash import set_flash
 from app.web.dependencies.auth import is_admin, get_agent_from_user, require_admin_role
@@ -128,6 +129,11 @@ async def alerts_page(
     if is_admin(current_user):
         agents = db.query(Agent).all()
 
+    # Lista de compradores (solo admin)
+    buyers = []
+    if is_admin(current_user):
+        buyers = db.query(Buyer).order_by(Buyer.name.asc()).all()
+
     # Cola secuencial: para un agente, solo la alerta activa (más antigua abierta)
     # es accionable; el resto se muestran bloqueadas. El admin no tiene cola.
     active_alert_id = None
@@ -142,6 +148,7 @@ async def alerts_page(
         context={
             "request": request,
             "alerts": alerts,
+            "buyers": buyers,
             "current_user": current_user,
             "pending_count": pending_count,
             "in_progress_count": in_progress_count,
@@ -154,6 +161,138 @@ async def alerts_page(
             "AlertStatus": AlertStatus
         }
     )
+
+
+@router.get("/alerts/search-buyers")
+async def search_buyers(
+    request: Request,
+    q: str = "",
+    db: Session = Depends(get_db)
+):
+    """Autocompletado de compradores para el formulario de nueva alerta."""
+
+    current_user = request.state.user
+
+    if not is_admin(current_user):
+        return JSONResponse(status_code=403, content={"results": []})
+
+    term = (q or "").strip()
+
+    if len(term) < 2:
+        return JSONResponse(content={"results": []})
+
+    like = f"%{term}%"
+
+    buyers = (
+        db.query(Buyer)
+        .filter(
+            or_(
+                Buyer.name.ilike(like),
+                Buyer.phone.ilike(like),
+                Buyer.email.ilike(like),
+            )
+        )
+        .order_by(Buyer.name.asc())
+        .limit(15)
+        .all()
+    )
+
+    results = [
+        {
+            "id": b.id,
+            "name": b.name,
+            "phone": b.phone or "",
+            "email": b.email or "",
+        }
+        for b in buyers
+    ]
+
+    return JSONResponse(content={"results": results})
+
+
+@router.post("/buyers/create")
+async def create_buyer(
+    request: Request,
+    name: str = Form(...),
+    phone: str = Form(None),
+    email: str = Form(None),
+    notes: str = Form(None),
+    db: Session = Depends(get_db)
+):
+    """Crear nuevo comprador sin alerta asociada (solo admin)"""
+
+    current_user = request.state.user
+
+    if not is_admin(current_user):
+        response = RedirectResponse(url="/alerts", status_code=302)
+        set_flash(response, "error", "Solo administradores pueden crear compradores")
+        return response
+
+    name = (name or "").strip()
+    if not name:
+        response = RedirectResponse(url="/alerts", status_code=302)
+        set_flash(response, "error", "El nombre del comprador es obligatorio")
+        return response
+
+    try:
+        buyer = Buyer(
+            name=name,
+            phone=(phone or "").strip() or None,
+            email=(email or "").strip() or None,
+            notes=notes,
+            created_by=current_user.id
+        )
+        db.add(buyer)
+        db.commit()
+
+        response = RedirectResponse(url="/alerts?tab=buyers", status_code=302)
+        set_flash(response, "success", f"Comprador {name} creado correctamente")
+        return response
+
+    except Exception:
+        db.rollback()
+        logger.exception("Error creando comprador")
+        response = RedirectResponse(url="/alerts", status_code=302)
+        set_flash(response, "error", "Ocurrió un error al crear el comprador")
+        return response
+
+
+@router.post("/buyers/{buyer_id}/delete")
+async def delete_buyer(
+    buyer_id: int,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Eliminar un comprador (solo admin)"""
+
+    current_user = request.state.user
+
+    if not is_admin(current_user):
+        response = RedirectResponse(url="/alerts", status_code=302)
+        set_flash(response, "error", "Solo administradores pueden eliminar compradores")
+        return response
+
+    buyer = db.query(Buyer).filter(Buyer.id == buyer_id).first()
+
+    if not buyer:
+        response = RedirectResponse(url="/alerts?tab=buyers", status_code=302)
+        set_flash(response, "error", "Comprador no encontrado")
+        return response
+
+    try:
+        db.delete(buyer)
+        db.commit()
+
+        response = RedirectResponse(url="/alerts?tab=buyers", status_code=302)
+        set_flash(response, "success", f"Comprador {buyer.name} eliminado correctamente")
+        return response
+
+    except Exception:
+        db.rollback()
+        logger.exception("Error eliminando comprador: buyer_id=%s", buyer_id)
+        response = RedirectResponse(url="/alerts?tab=buyers", status_code=302)
+        set_flash(response, "error", "Ocurrió un error al eliminar el comprador")
+        return response
 
 
 @router.get("/alerts/search-properties")
@@ -269,16 +408,17 @@ async def alert_detail(
 async def create_alert(
     request: Request,
     property_id: int = Form(...),
-    lead_name: str = Form(...),
-    lead_phone: str = Form(...),
-    lead_email: str = Form(None),
+    buyer_id: int = Form(None),
+    buyer_name: str = Form(None),
+    buyer_phone: str = Form(None),
+    buyer_email: str = Form(None),
     source: str = Form(None),
     alert_type: str = Form(AlertType.LEAD_INTERES),
     message: str = Form(None),
     priority: str = Form(AlertPriority.NORMAL),
     db: Session = Depends(get_db)
 ):
-    """Crear nueva alerta (solo admin)"""
+    """Crear nueva alerta con comprador existente o nuevo (solo admin)"""
 
     current_user = request.state.user
 
@@ -287,23 +427,42 @@ async def create_alert(
         set_flash(response, "error", "Solo administradores pueden crear alertas")
         return response
 
-    # El teléfono del interesado es obligatorio
-    lead_phone = (lead_phone or "").strip()
+    # Resolver comprador: existente o nuevo
+    buyer = None
 
-    if not lead_phone:
-        response = RedirectResponse(url="/alerts", status_code=302)
-        set_flash(response, "error", "El teléfono del interesado es obligatorio")
-        return response
+    if buyer_id:
+        buyer = db.query(Buyer).filter(Buyer.id == buyer_id).first()
+        if not buyer:
+            response = RedirectResponse(url="/alerts", status_code=302)
+            set_flash(response, "error", "Comprador no encontrado")
+            return response
+    else:
+        buyer_name = (buyer_name or "").strip()
+        if not buyer_name:
+            response = RedirectResponse(url="/alerts", status_code=302)
+            set_flash(response, "error", "El nombre del comprador es obligatorio")
+            return response
+
+        buyer = Buyer(
+            name=buyer_name,
+            phone=(buyer_phone or "").strip() or None,
+            email=(buyer_email or "").strip() or None,
+            created_by=current_user.id
+        )
+        db.add(buyer)
+        db.flush()  # obtener buyer.id antes del commit
 
     # Obtener la propiedad y su agente
     property_item = db.query(Property).filter(Property.id == property_id).first()
 
     if not property_item:
+        db.rollback()
         response = RedirectResponse(url="/alerts", status_code=302)
         set_flash(response, "error", "Propiedad no encontrada")
         return response
 
     if not property_item.agent_id:
+        db.rollback()
         response = RedirectResponse(url="/alerts", status_code=302)
         set_flash(response, "error", "La propiedad no tiene agente asignado")
         return response
@@ -312,9 +471,10 @@ async def create_alert(
         alert = PropertyAlert(
             property_id=property_id,
             agent_id=property_item.agent_id,
-            lead_name=lead_name,
-            lead_phone=lead_phone,
-            lead_email=lead_email,
+            buyer_id=buyer.id,
+            lead_name=buyer.name,
+            lead_phone=buyer.phone,
+            lead_email=buyer.email,
             source=source,
             alert_type=alert_type,
             message=message,
@@ -327,7 +487,7 @@ async def create_alert(
         db.commit()
 
         response = RedirectResponse(url="/alerts", status_code=302)
-        set_flash(response, "success", f"Alerta creada para {lead_name}")
+        set_flash(response, "success", f"Alerta de comprador creada para {buyer.name}")
         return response
 
     except Exception:

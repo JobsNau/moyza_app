@@ -95,6 +95,12 @@ class PropertyAlert(Base):
         nullable=False
     )
 
+    buyer_id = Column(
+        Integer,
+        ForeignKey("buyers.id"),
+        nullable=True
+    )
+
     # Relaciones
     property = relationship(
         "Property",
@@ -104,6 +110,11 @@ class PropertyAlert(Base):
     agent = relationship(
         "Agent",
         backref="alerts"
+    )
+
+    buyer = relationship(
+        "Buyer",
+        back_populates="alerts"
     )
 
     follow_ups = relationship(

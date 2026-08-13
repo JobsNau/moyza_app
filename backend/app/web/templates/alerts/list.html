@@ -16,7 +16,7 @@
             </div>
 
             {% if request.state.user.role.name.lower() == 'admin' %}
-            <div class="flex gap-2">
+            <div class="flex flex-wrap gap-2">
                 <button
                     onclick="openCreateBuyerModal()"
                     class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2 text-sm font-medium border border-gray-300"
@@ -33,7 +33,16 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                     </svg>
-                    Agregar alerta de comprador
+                    Agregar alerta comprador
+                </button>
+                <button
+                    onclick="openFilterAlertModal()"
+                    class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2 text-sm font-medium"
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"></path>
+                    </svg>
+                    Agregar alerta con filtro
                 </button>
             </div>
             {% endif %}
@@ -140,7 +149,9 @@
                                 {% for buyer in buyers %}
                                 <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                                     <td class="px-6 py-4 text-sm font-medium text-gray-800">
-                                        {{ buyer.name }}
+                                        <a href="/buyers/{{ buyer.id }}" class="text-blue-600 hover:underline font-medium">
+                                            {{ buyer.name }}
+                                        </a>
                                     </td>
                                     <td class="px-6 py-4 text-sm text-gray-600">
                                         {{ buyer.phone or '-' }}
@@ -612,6 +623,40 @@ function openCreateAlertModal() {
 function closeCreateAlertModal() {
     document.getElementById('createAlertModal').classList.add('hidden');
 }
+function openFilterAlertModal() {
+    document.getElementById('filterAlertModal').classList.remove('hidden');
+    setFcBuyerMode('existing');
+}
+function closeFilterAlertModal() {
+    document.getElementById('filterAlertModal').classList.add('hidden');
+}
+function setFcBuyerMode(mode) {
+    var panelExisting = document.getElementById('fcPanelExisting');
+    var panelNew = document.getElementById('fcPanelNew');
+    var btnExisting = document.getElementById('fcBtnExisting');
+    var btnNew = document.getElementById('fcBtnNew');
+    var selectEl = document.getElementById('fcBuyerSelect');
+    var nameEl = document.getElementById('fcBuyerName');
+    if (mode === 'existing') {
+        panelExisting.classList.remove('hidden');
+        panelNew.classList.add('hidden');
+        btnExisting.classList.add('border-indigo-600', 'bg-indigo-600', 'text-white');
+        btnExisting.classList.remove('border-gray-200', 'bg-white', 'text-gray-600');
+        btnNew.classList.remove('border-indigo-600', 'bg-indigo-600', 'text-white');
+        btnNew.classList.add('border-gray-200', 'bg-white', 'text-gray-600');
+        if (selectEl) selectEl.setAttribute('name', 'buyer_id');
+        if (nameEl) nameEl.removeAttribute('required');
+    } else {
+        panelExisting.classList.add('hidden');
+        panelNew.classList.remove('hidden');
+        btnNew.classList.add('border-indigo-600', 'bg-indigo-600', 'text-white');
+        btnNew.classList.remove('border-gray-200', 'bg-white', 'text-gray-600');
+        btnExisting.classList.remove('border-indigo-600', 'bg-indigo-600', 'text-white');
+        btnExisting.classList.add('border-gray-200', 'bg-white', 'text-gray-600');
+        if (selectEl) selectEl.removeAttribute('name');
+        if (nameEl) nameEl.setAttribute('required', 'required');
+    }
+}
 
 // ---- Modo comprador (existente / nuevo) ----
 var currentBuyerMode = 'existing';
@@ -898,6 +943,207 @@ function setBuyerMode(mode) {
     });
 })();
 </script>
+<!-- Modal: Agregar alerta con filtro (comprador + criterios de búsqueda) -->
+<div id="filterAlertModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl max-w-3xl w-full max-h-[92vh] overflow-y-auto">
+        <form method="POST" action="/buyers/create-with-criteria">
+            <d  iv class="p-6 border-b border-gray-200">
+                <h2 class="text-xl font-bold text-gray-800">Agregar alerta con filtro</h2>
+                <p class="text-sm text-gray-500 mt-1">Registra el comprador y sus criterios de búsqueda. Al guardar verás las propiedades compatibles.</p>
+            </div>
+
+            <div class="p-6 space-y-6">
+
+                <!-- Sección comprador -->
+                <div class="bg-gray-50 rounded-xl p-4 space-y-4">
+                    <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Comprador</h3>
+                    <div class="flex gap-3">
+                        <button type="button" id="fcBtnExisting" onclick="setFcBuyerMode('existing')"
+                            class="flex-1 py-2 px-3 rounded-lg border-2 border-indigo-600 bg-indigo-600 text-white text-sm font-medium transition-colors">
+                            Comprador existente
+                        </button>
+                        <button type="button" id="fcBtnNew" onclick="setFcBuyerMode('new')"
+                            class="flex-1 py-2 px-3 rounded-lg border-2 border-gray-200 bg-white text-gray-600 text-sm font-medium transition-colors hover:border-gray-300">
+                            Nuevo comprador
+                        </button>
+                    </div>
+
+                    <div id="fcPanelExisting">
+                        <select name="buyer_id" id="fcBuyerSelect"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm">
+                            <option value="">— Selecciona un comprador —</option>
+                            {% for buyer in buyers %}
+                            <option value="{{ buyer.id }}">
+                                {{ buyer.name }}{% if buyer.phone %} · {{ buyer.phone }}{% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div id="fcPanelNew" class="hidden space-y-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Nombre <span class="text-red-500">*</span></label>
+                            <input type="text" name="buyer_name" id="fcBuyerName"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                                <input type="tel" name="buyer_phone"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                <input type="email" name="buyer_email"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Criterios de búsqueda -->
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">Criterios de búsqueda</h3>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+
+                        <!-- Ubicación -->
+                        <div class="space-y-4">
+                            {% if zones %}
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Zonas</label>
+                                <div class="border border-gray-200 rounded-lg p-3 max-h-36 overflow-y-auto space-y-1.5 bg-white">
+                                    {% for zone in zones %}
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" name="zones" value="{{ zone }}"
+                                            class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                        <span class="text-sm text-gray-700">{{ zone }}</span>
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% if cities %}
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Ciudades</label>
+                                <div class="border border-gray-200 rounded-lg p-3 max-h-36 overflow-y-auto space-y-1.5 bg-white">
+                                    {% for city in cities %}
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" name="cities" value="{{ city }}"
+                                            class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                        <span class="text-sm text-gray-700">{{ city }}</span>
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Tipo + habitaciones -->
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de inmueble</label>
+                                <select name="property_type"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+                                    <option value="">Cualquier tipo</option>
+                                    {% for pt in property_types %}
+                                    <option value="{{ pt }}">{{ pt }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Operación</label>
+                                <select name="business_type"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+                                    <option value="">Cualquier operación</option>
+                                    {% for bt in business_types %}
+                                    <option value="{{ bt }}">{{ bt }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Dorm. mín.</label>
+                                    <input type="number" name="min_bedrooms" min="0" max="20" placeholder="–"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Dorm. máx.</label>
+                                    <input type="number" name="max_bedrooms" min="0" max="20" placeholder="–"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Baños mín.</label>
+                                <input type="number" name="min_bathrooms" min="0" max="10" placeholder="–"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                        </div>
+
+                        <!-- Precio + m² + agente + notas -->
+                        <div class="space-y-3">
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Precio mín. €</label>
+                                    <input type="number" name="min_price" min="0" step="1000" placeholder="–"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Precio máx. €</label>
+                                    <input type="number" name="max_price" min="0" step="1000" placeholder="–"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">m² mín.</label>
+                                    <input type="number" name="min_m2" min="0" placeholder="–"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">m² máx.</label>
+                                    <input type="number" name="max_m2" min="0" placeholder="–"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Agente responsable</label>
+                                <select name="agent_id"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+                                    <option value="">Sin asignar</option>
+                                    {% for agent in agents %}
+                                    <option value="{{ agent.id }}">{{ agent.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Imprescindibles</label>
+                                <textarea name="notes" rows="3" placeholder="Ej: planta baja, piscina, sin reformar..."
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 resize-none"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="p-6 border-t border-gray-200 flex gap-3 justify-end">
+                <button type="button" onclick="closeFilterAlertModal()"
+                    class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors text-sm">
+                    Cancelar
+                </button>
+                <button type="submit"
+                    class="px-4 py-2 text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                    Guardar y ver propiedades compatibles
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 {% endif %}
 
 {% endblock %}

@@ -29,3 +29,10 @@ class Buyer(Base):
         back_populates="buyer",
         cascade="all, delete-orphan"
     )
+
+    search_criteria = relationship(
+        "BuyerSearchCriteria",
+        back_populates="buyer",
+        uselist=False,  # one-to-one
+        cascade="all, delete-orphan"
+    )

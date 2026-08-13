@@ -1,0 +1,57 @@
+from datetime import datetime
+
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Numeric, SmallInteger, JSON
+from sqlalchemy.orm import relationship
+
+from app.db.base import Base
+
+
+class BuyerSearchCriteria(Base):
+
+    __tablename__ = "buyer_search_criteria"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    buyer_id = Column(
+        Integer,
+        ForeignKey("buyers.id"),
+        nullable=False,
+        unique=True  # un perfil de búsqueda por comprador
+    )
+
+    agent_id = Column(
+        Integer,
+        ForeignKey("agents.id"),
+        nullable=True
+    )
+
+    # Ubicación (listas JSON de valores de las propiedades existentes)
+    zones = Column(JSON, nullable=True)   # ["Eixample", "Gràcia", ...]
+    cities = Column(JSON, nullable=True)  # ["Barcelona", "Hospitalet", ...]
+
+    # Tipo de inmueble y operación
+    property_type = Column(String, nullable=True)   # Casa, Piso, Local…
+    business_type = Column(String, nullable=True)   # Venta, Alquiler
+
+    # Rango de precio
+    min_price = Column(Numeric, nullable=True)
+    max_price = Column(Numeric, nullable=True)
+
+    # Habitaciones y baños
+    min_bedrooms = Column(SmallInteger, nullable=True)
+    max_bedrooms = Column(SmallInteger, nullable=True)
+    min_bathrooms = Column(SmallInteger, nullable=True)
+
+    # Superficie
+    min_m2 = Column(Numeric, nullable=True)
+    max_m2 = Column(Numeric, nullable=True)
+
+    # Requisitos adicionales en texto libre
+    notes = Column(Text, nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relaciones
+    buyer = relationship("Buyer", back_populates="search_criteria")
+    agent = relationship("Agent")

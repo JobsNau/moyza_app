@@ -26,6 +26,8 @@ from app.models.alert_follow_up import AlertFollowUp
 from app.models.property import Property
 from app.models.agent import Agent
 from app.models.user import User
+from app.models.buyer import Buyer
+from app.models.buyer_search_criteria import BuyerSearchCriteria
 
 from app.web.utils.flash import set_flash
 from app.web.dependencies.auth import is_admin, get_agent_from_user, require_admin_role
@@ -128,6 +130,31 @@ async def alerts_page(
     if is_admin(current_user):
         agents = db.query(Agent).all()
 
+    # Lista de compradores (visible para todos)
+    buyers = db.query(Buyer).order_by(Buyer.name.asc()).all()
+
+    # Valores para selectores del modal de criteria
+    zones = [
+        r[0] for r in
+        db.query(Property.zona).filter(Property.zona.isnot(None), Property.zona != "")
+        .distinct().order_by(Property.zona.asc()).all()
+    ]
+    cities = [
+        r[0] for r in
+        db.query(Property.city).filter(Property.city.isnot(None), Property.city != "")
+        .distinct().order_by(Property.city.asc()).all()
+    ]
+    property_types = [
+        r[0] for r in
+        db.query(Property.property_type).filter(Property.property_type.isnot(None))
+        .distinct().order_by(Property.property_type.asc()).all()
+    ]
+    business_types = [
+        r[0] for r in
+        db.query(Property.business_type).filter(Property.business_type.isnot(None))
+        .distinct().order_by(Property.business_type.asc()).all()
+    ]
+
     # Cola secuencial: para un agente, solo la alerta activa (más antigua abierta)
     # es accionable; el resto se muestran bloqueadas. El admin no tiene cola.
     active_alert_id = None
@@ -142,6 +169,7 @@ async def alerts_page(
         context={
             "request": request,
             "alerts": alerts,
+            "buyers": buyers,
             "current_user": current_user,
             "pending_count": pending_count,
             "in_progress_count": in_progress_count,
@@ -149,11 +177,250 @@ async def alerts_page(
             "agents": agents,
             "active_alert_id": active_alert_id,
             "is_admin": is_admin(current_user),
+            "zones": zones,
+            "cities": cities,
+            "property_types": property_types,
+            "business_types": business_types,
             "AlertType": AlertType,
             "AlertPriority": AlertPriority,
             "AlertStatus": AlertStatus
         }
     )
+
+
+@router.get("/alerts/search-buyers")
+async def search_buyers(
+    request: Request,
+    q: str = "",
+    db: Session = Depends(get_db)
+):
+    """Autocompletado de compradores para el formulario de nueva alerta."""
+
+    current_user = request.state.user
+
+    if not is_admin(current_user):
+        return JSONResponse(status_code=403, content={"results": []})
+
+    term = (q or "").strip()
+
+    if len(term) < 2:
+        return JSONResponse(content={"results": []})
+
+    like = f"%{term}%"
+
+    buyers = (
+        db.query(Buyer)
+        .filter(
+            or_(
+                Buyer.name.ilike(like),
+                Buyer.phone.ilike(like),
+                Buyer.email.ilike(like),
+            )
+        )
+        .order_by(Buyer.name.asc())
+        .limit(15)
+        .all()
+    )
+
+    results = [
+        {
+            "id": b.id,
+            "name": b.name,
+            "phone": b.phone or "",
+            "email": b.email or "",
+        }
+        for b in buyers
+    ]
+
+    return JSONResponse(content={"results": results})
+
+
+@router.post("/buyers/create")
+async def create_buyer(
+    request: Request,
+    name: str = Form(...),
+    phone: str = Form(None),
+    email: str = Form(None),
+    notes: str = Form(None),
+    db: Session = Depends(get_db)
+):
+    """Crear nuevo comprador sin alerta asociada (solo admin)"""
+
+    current_user = request.state.user
+
+    if not is_admin(current_user):
+        response = RedirectResponse(url="/alerts", status_code=302)
+        set_flash(response, "error", "Solo administradores pueden crear compradores")
+        return response
+
+    name = (name or "").strip()
+    if not name:
+        response = RedirectResponse(url="/alerts", status_code=302)
+        set_flash(response, "error", "El nombre del comprador es obligatorio")
+        return response
+
+    try:
+        buyer = Buyer(
+            name=name,
+            phone=(phone or "").strip() or None,
+            email=(email or "").strip() or None,
+            notes=notes,
+            created_by=current_user.id
+        )
+        db.add(buyer)
+        db.commit()
+
+        response = RedirectResponse(url="/alerts?tab=buyers", status_code=302)
+        set_flash(response, "success", f"Comprador {name} creado correctamente")
+        return response
+
+    except Exception:
+        db.rollback()
+        logger.exception("Error creando comprador")
+        response = RedirectResponse(url="/alerts", status_code=302)
+        set_flash(response, "error", "Ocurrió un error al crear el comprador")
+        return response
+
+
+@router.post("/buyers/create-with-criteria")
+async def create_buyer_with_criteria(
+    request: Request,
+    buyer_id: int = Form(None),
+    buyer_name: str = Form(None),
+    buyer_phone: str = Form(None),
+    buyer_email: str = Form(None),
+    agent_id: int = Form(None),
+    property_type: str = Form(None),
+    business_type: str = Form(None),
+    min_price: str = Form(None),
+    max_price: str = Form(None),
+    min_bedrooms: str = Form(None),
+    max_bedrooms: str = Form(None),
+    min_bathrooms: str = Form(None),
+    min_m2: str = Form(None),
+    max_m2: str = Form(None),
+    notes: str = Form(None),
+    db: Session = Depends(get_db)
+):
+    """Crea o selecciona un comprador, guarda sus criterios y va a los matches."""
+
+    current_user = request.state.user
+
+    if not is_admin(current_user):
+        response = RedirectResponse(url="/alerts", status_code=302)
+        set_flash(response, "error", "Acceso no autorizado")
+        return response
+
+    form_data = await request.form()
+    zones = form_data.getlist("zones")
+    cities_sel = form_data.getlist("cities")
+
+    def to_int(v):
+        try:
+            return int(v) if v and str(v).strip() else None
+        except (ValueError, TypeError):
+            return None
+
+    def to_decimal(v):
+        try:
+            return float(v) if v and str(v).strip() else None
+        except (ValueError, TypeError):
+            return None
+
+    try:
+        # Resolver comprador
+        if buyer_id:
+            buyer = db.query(Buyer).filter(Buyer.id == buyer_id).first()
+            if not buyer:
+                response = RedirectResponse(url="/alerts", status_code=302)
+                set_flash(response, "error", "Comprador no encontrado")
+                return response
+        else:
+            buyer_name = (buyer_name or "").strip()
+            if not buyer_name:
+                response = RedirectResponse(url="/alerts", status_code=302)
+                set_flash(response, "error", "El nombre del comprador es obligatorio")
+                return response
+            buyer = Buyer(
+                name=buyer_name,
+                phone=(buyer_phone or "").strip() or None,
+                email=(buyer_email or "").strip() or None,
+                created_by=current_user.id
+            )
+            db.add(buyer)
+            db.flush()
+
+        # Crear o actualizar criterios
+        criteria = buyer.search_criteria
+        if criteria is None:
+            criteria = BuyerSearchCriteria(buyer_id=buyer.id)
+            db.add(criteria)
+
+        criteria.agent_id = agent_id or None
+        criteria.zones = zones or None
+        criteria.cities = cities_sel or None
+        criteria.property_type = property_type or None
+        criteria.business_type = business_type or None
+        criteria.min_price = to_decimal(min_price)
+        criteria.max_price = to_decimal(max_price)
+        criteria.min_bedrooms = to_int(min_bedrooms)
+        criteria.max_bedrooms = to_int(max_bedrooms)
+        criteria.min_bathrooms = to_int(min_bathrooms)
+        criteria.min_m2 = to_decimal(min_m2)
+        criteria.max_m2 = to_decimal(max_m2)
+        criteria.notes = (notes or "").strip() or None
+        criteria.updated_at = datetime.utcnow()
+
+        db.commit()
+
+        response = RedirectResponse(url=f"/buyers/{buyer.id}?tab=matches", status_code=302)
+        set_flash(response, "success", f"Perfil de {buyer.name} guardado — propiedades compatibles:")
+        return response
+
+    except Exception:
+        db.rollback()
+        logger.exception("Error en create-with-criteria")
+        response = RedirectResponse(url="/alerts", status_code=302)
+        set_flash(response, "error", "Ocurrió un error al guardar")
+        return response
+
+
+@router.post("/buyers/{buyer_id}/delete")
+async def delete_buyer(
+    buyer_id: int,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Eliminar un comprador (solo admin)"""
+
+    current_user = request.state.user
+
+    if not is_admin(current_user):
+        response = RedirectResponse(url="/alerts", status_code=302)
+        set_flash(response, "error", "Solo administradores pueden eliminar compradores")
+        return response
+
+    buyer = db.query(Buyer).filter(Buyer.id == buyer_id).first()
+
+    if not buyer:
+        response = RedirectResponse(url="/alerts?tab=buyers", status_code=302)
+        set_flash(response, "error", "Comprador no encontrado")
+        return response
+
+    try:
+        db.delete(buyer)
+        db.commit()
+
+        response = RedirectResponse(url="/alerts?tab=buyers", status_code=302)
+        set_flash(response, "success", f"Comprador {buyer.name} eliminado correctamente")
+        return response
+
+    except Exception:
+        db.rollback()
+        logger.exception("Error eliminando comprador: buyer_id=%s", buyer_id)
+        response = RedirectResponse(url="/alerts?tab=buyers", status_code=302)
+        set_flash(response, "error", "Ocurrió un error al eliminar el comprador")
+        return response
 
 
 @router.get("/alerts/search-properties")
@@ -269,16 +536,17 @@ async def alert_detail(
 async def create_alert(
     request: Request,
     property_id: int = Form(...),
-    lead_name: str = Form(...),
-    lead_phone: str = Form(...),
-    lead_email: str = Form(None),
+    buyer_id: int = Form(None),
+    buyer_name: str = Form(None),
+    buyer_phone: str = Form(None),
+    buyer_email: str = Form(None),
     source: str = Form(None),
     alert_type: str = Form(AlertType.LEAD_INTERES),
     message: str = Form(None),
     priority: str = Form(AlertPriority.NORMAL),
     db: Session = Depends(get_db)
 ):
-    """Crear nueva alerta (solo admin)"""
+    """Crear nueva alerta con comprador existente o nuevo (solo admin)"""
 
     current_user = request.state.user
 
@@ -287,23 +555,42 @@ async def create_alert(
         set_flash(response, "error", "Solo administradores pueden crear alertas")
         return response
 
-    # El teléfono del interesado es obligatorio
-    lead_phone = (lead_phone or "").strip()
+    # Resolver comprador: existente o nuevo
+    buyer = None
 
-    if not lead_phone:
-        response = RedirectResponse(url="/alerts", status_code=302)
-        set_flash(response, "error", "El teléfono del interesado es obligatorio")
-        return response
+    if buyer_id:
+        buyer = db.query(Buyer).filter(Buyer.id == buyer_id).first()
+        if not buyer:
+            response = RedirectResponse(url="/alerts", status_code=302)
+            set_flash(response, "error", "Comprador no encontrado")
+            return response
+    else:
+        buyer_name = (buyer_name or "").strip()
+        if not buyer_name:
+            response = RedirectResponse(url="/alerts", status_code=302)
+            set_flash(response, "error", "El nombre del comprador es obligatorio")
+            return response
+
+        buyer = Buyer(
+            name=buyer_name,
+            phone=(buyer_phone or "").strip() or None,
+            email=(buyer_email or "").strip() or None,
+            created_by=current_user.id
+        )
+        db.add(buyer)
+        db.flush()  # obtener buyer.id antes del commit
 
     # Obtener la propiedad y su agente
     property_item = db.query(Property).filter(Property.id == property_id).first()
 
     if not property_item:
+        db.rollback()
         response = RedirectResponse(url="/alerts", status_code=302)
         set_flash(response, "error", "Propiedad no encontrada")
         return response
 
     if not property_item.agent_id:
+        db.rollback()
         response = RedirectResponse(url="/alerts", status_code=302)
         set_flash(response, "error", "La propiedad no tiene agente asignado")
         return response
@@ -312,9 +599,10 @@ async def create_alert(
         alert = PropertyAlert(
             property_id=property_id,
             agent_id=property_item.agent_id,
-            lead_name=lead_name,
-            lead_phone=lead_phone,
-            lead_email=lead_email,
+            buyer_id=buyer.id,
+            lead_name=buyer.name,
+            lead_phone=buyer.phone,
+            lead_email=buyer.email,
             source=source,
             alert_type=alert_type,
             message=message,
@@ -327,7 +615,7 @@ async def create_alert(
         db.commit()
 
         response = RedirectResponse(url="/alerts", status_code=302)
-        set_flash(response, "success", f"Alerta creada para {lead_name}")
+        set_flash(response, "success", f"Alerta de comprador creada para {buyer.name}")
         return response
 
     except Exception:
@@ -756,3 +1044,201 @@ async def alerts_dashboard(
             "AlertStatus": AlertStatus
         }
     )
+
+
+# ---------------------------------------------------------------------------
+# Detalle del comprador y perfil de búsqueda
+# ---------------------------------------------------------------------------
+
+def _build_matching_properties(criteria: BuyerSearchCriteria, db: Session):
+    """Filtra propiedades activas que cumplen todos los criterios definidos."""
+    query = db.query(Property).filter(
+        Property.status == PropertyStatus.ACTIVE,
+        Property.agent_id.isnot(None),
+    )
+
+    if criteria.zones:
+        query = query.filter(Property.zona.in_(criteria.zones))
+    if criteria.cities:
+        query = query.filter(Property.city.in_(criteria.cities))
+    if criteria.property_type:
+        query = query.filter(Property.property_type == criteria.property_type)
+    if criteria.business_type:
+        query = query.filter(Property.business_type == criteria.business_type)
+    if criteria.min_price is not None:
+        query = query.filter(Property.price >= criteria.min_price)
+    if criteria.max_price is not None:
+        query = query.filter(Property.price <= criteria.max_price)
+    if criteria.min_bedrooms is not None:
+        query = query.filter(Property.num_dormitorios >= criteria.min_bedrooms)
+    if criteria.max_bedrooms is not None:
+        query = query.filter(Property.num_dormitorios <= criteria.max_bedrooms)
+    if criteria.min_bathrooms is not None:
+        query = query.filter(Property.num_banos_aseos >= criteria.min_bathrooms)
+    if criteria.min_m2 is not None:
+        query = query.filter(Property.m2_utiles >= criteria.min_m2)
+    if criteria.max_m2 is not None:
+        query = query.filter(Property.m2_utiles <= criteria.max_m2)
+
+    return query.order_by(Property.price.asc()).all()
+
+
+@router.get("/buyers/{buyer_id}", response_class=HTMLResponse)
+async def buyer_detail(
+    buyer_id: int,
+    request: Request,
+    tab: str = "criteria",
+    db: Session = Depends(get_db)
+):
+    """Detalle del comprador: perfil de búsqueda, matches y alertas."""
+
+    current_user = request.state.user
+
+    buyer = db.query(Buyer).filter(Buyer.id == buyer_id).first()
+    if not buyer:
+        response = RedirectResponse(url="/alerts?tab=buyers", status_code=302)
+        set_flash(response, "error", "Comprador no encontrado")
+        return response
+
+    criteria = buyer.search_criteria
+
+    # Propiedades que hacen match (solo si hay criterios definidos)
+    matching_properties = []
+    if criteria:
+        matching_properties = _build_matching_properties(criteria, db)
+
+    # Valores disponibles en la BD para los selectores
+    zones = [
+        r[0] for r in
+        db.query(Property.zona).filter(Property.zona.isnot(None), Property.zona != "")
+        .distinct().order_by(Property.zona.asc()).all()
+    ]
+    cities = [
+        r[0] for r in
+        db.query(Property.city).filter(Property.city.isnot(None), Property.city != "")
+        .distinct().order_by(Property.city.asc()).all()
+    ]
+    property_types = [
+        r[0] for r in
+        db.query(Property.property_type).filter(Property.property_type.isnot(None))
+        .distinct().order_by(Property.property_type.asc()).all()
+    ]
+    business_types = [
+        r[0] for r in
+        db.query(Property.business_type).filter(Property.business_type.isnot(None))
+        .distinct().order_by(Property.business_type.asc()).all()
+    ]
+
+    agents = db.query(Agent).order_by(Agent.name.asc()).all()
+    buyer_alerts = (
+        db.query(PropertyAlert)
+        .filter(PropertyAlert.buyer_id == buyer_id)
+        .order_by(PropertyAlert.created_at.desc())
+        .all()
+    )
+
+    return templates.TemplateResponse(
+        request=request,
+        name="buyers/detail.html",
+        context={
+            "request": request,
+            "current_user": current_user,
+            "is_admin": is_admin(current_user),
+            "buyer": buyer,
+            "criteria": criteria,
+            "matching_properties": matching_properties,
+            "buyer_alerts": buyer_alerts,
+            "agents": agents,
+            "zones": zones,
+            "cities": cities,
+            "property_types": property_types,
+            "business_types": business_types,
+            "tab": tab,
+            "AlertStatus": AlertStatus,
+            "AlertPriority": AlertPriority,
+        }
+    )
+
+
+@router.post("/buyers/{buyer_id}/search-criteria")
+async def save_search_criteria(
+    buyer_id: int,
+    request: Request,
+    agent_id: int = Form(None),
+    property_type: str = Form(None),
+    business_type: str = Form(None),
+    min_price: str = Form(None),
+    max_price: str = Form(None),
+    min_bedrooms: str = Form(None),
+    max_bedrooms: str = Form(None),
+    min_bathrooms: str = Form(None),
+    min_m2: str = Form(None),
+    max_m2: str = Form(None),
+    notes: str = Form(None),
+    db: Session = Depends(get_db)
+):
+    """Crear o actualizar el perfil de búsqueda de un comprador (solo admin)."""
+
+    current_user = request.state.user
+
+    if not is_admin(current_user):
+        response = RedirectResponse(url="/alerts", status_code=302)
+        set_flash(response, "error", "Acceso no autorizado")
+        return response
+
+    buyer = db.query(Buyer).filter(Buyer.id == buyer_id).first()
+    if not buyer:
+        response = RedirectResponse(url="/alerts?tab=buyers", status_code=302)
+        set_flash(response, "error", "Comprador no encontrado")
+        return response
+
+    # Zonas y ciudades vienen como lista de checkboxes
+    form_data = await request.form()
+    zones = form_data.getlist("zones")
+    cities_sel = form_data.getlist("cities")
+
+    def to_int(v):
+        try:
+            return int(v) if v and str(v).strip() else None
+        except (ValueError, TypeError):
+            return None
+
+    def to_decimal(v):
+        try:
+            return float(v) if v and str(v).strip() else None
+        except (ValueError, TypeError):
+            return None
+
+    try:
+        criteria = buyer.search_criteria
+        if criteria is None:
+            criteria = BuyerSearchCriteria(buyer_id=buyer_id)
+            db.add(criteria)
+
+        criteria.agent_id = agent_id or None
+        criteria.zones = zones or None
+        criteria.cities = cities_sel or None
+        criteria.property_type = property_type or None
+        criteria.business_type = business_type or None
+        criteria.min_price = to_decimal(min_price)
+        criteria.max_price = to_decimal(max_price)
+        criteria.min_bedrooms = to_int(min_bedrooms)
+        criteria.max_bedrooms = to_int(max_bedrooms)
+        criteria.min_bathrooms = to_int(min_bathrooms)
+        criteria.min_m2 = to_decimal(min_m2)
+        criteria.max_m2 = to_decimal(max_m2)
+        criteria.notes = (notes or "").strip() or None
+        criteria.updated_at = datetime.utcnow()
+
+        db.commit()
+
+        response = RedirectResponse(url=f"/buyers/{buyer_id}?tab=matches", status_code=302)
+        set_flash(response, "success", "Perfil de búsqueda guardado")
+        return response
+
+    except Exception:
+        db.rollback()
+        logger.exception("Error guardando criterios: buyer_id=%s", buyer_id)
+        response = RedirectResponse(url=f"/buyers/{buyer_id}", status_code=302)
+        set_flash(response, "error", "Ocurrió un error al guardar el perfil")
+        return response

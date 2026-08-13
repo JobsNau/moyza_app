@@ -100,7 +100,7 @@ async def properties_page(
             )
         )
 
-    properties = filtered_query.order_by(Property.title).all()
+    properties = filtered_query.order_by(Property.title.desc()).all()
 
     return templates.TemplateResponse(
         request=request,

@@ -11,7 +11,7 @@ from fastapi.responses import RedirectResponse
 
 from fastapi.templating import Jinja2Templates
 
-from sqlalchemy import or_
+from sqlalchemy import or_, cast, Integer, case
 from sqlalchemy.orm import Session
 
 from app.core.constants import PropertyInteractionType
@@ -100,7 +100,11 @@ async def properties_page(
             )
         )
 
-    properties = filtered_query.order_by(Property.title.desc()).all()
+    numeric_title = case(
+        (Property.title.op("~")(r"^\d+$"), cast(Property.title, Integer)),
+        else_=None
+    )
+    properties = filtered_query.order_by(numeric_title.desc().nullslast()).all()
 
     return templates.TemplateResponse(
         request=request,

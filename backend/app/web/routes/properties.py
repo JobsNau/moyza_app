@@ -11,7 +11,8 @@ from fastapi.responses import RedirectResponse
 
 from fastapi.templating import Jinja2Templates
 
-from sqlalchemy import or_, cast, Integer, case
+from sqlalchemy import or_, cast, Integer, case, func
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app.core.constants import PropertyInteractionType
@@ -565,4 +566,25 @@ async def generate_report(
     response = RedirectResponse(url=f"/properties/{property_id}", status_code=302)
     set_flash(response, "success", "Informe generado")
     return response
+
+
+@router.get("/api/properties/last-update")
+async def properties_last_update(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Última actividad sobre propiedades: precio, estado o interacción."""
+    from app.models.property_price_history import PropertyPriceHistory
+    from app.models.property_status_history import PropertyStatusHistory
+
+    t1 = db.query(func.max(PropertyPriceHistory.created_at)).scalar()
+    t2 = db.query(func.max(PropertyStatusHistory.created_at)).scalar()
+    t3 = db.query(func.max(Property.market_entry_date)).scalar()
+
+    candidates = [t for t in [t1, t2, t3] if t is not None]
+    result = max(candidates) if candidates else None
+
+    return JSONResponse({
+        "last_update": result.isoformat() if result else None
+    })
 

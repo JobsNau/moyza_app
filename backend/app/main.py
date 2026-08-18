@@ -9,9 +9,10 @@ from app.core.logging_config import setup_logging
 from app.db.base import Base
 from app.db.session import engine
 from app.api.v1.router import api_router
-from app.web.routes import dashboard, clients, agents, auth, properties, reports, report_logs, ai_logs, visits, alerts
+from app.web.routes import dashboard, clients, agents, auth, properties, reports, report_logs, ai_logs, visits, alerts, activity_logs
 from app.web.middleware.auth import AuthMiddleware
 from app.web.middleware.flash import FlashMiddleware
+from app.web.middleware.activity import ActivityMiddleware
 from app.jobs.scheduler import start_scheduler, shutdown_scheduler
 
 # Configurar logging antes de inicializar la app
@@ -38,6 +39,7 @@ if os.getenv("DB_AUTOCREATE", "false").lower() == "true":
 
 app.add_middleware(AuthMiddleware)
 app.add_middleware(FlashMiddleware)
+app.add_middleware(ActivityMiddleware)
 
 app.include_router(api_router, prefix="/api/v1")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
@@ -52,6 +54,7 @@ app.include_router(reports.router)
 app.include_router(report_logs.router)
 app.include_router(ai_logs.router)
 app.include_router(alerts.router)
+app.include_router(activity_logs.router)
 
 
 @app.get("/")

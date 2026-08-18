@@ -174,6 +174,19 @@
 
     </nav>
 
+    <!-- Última actualización de propiedades -->
+    <div class="absolute bottom-0 left-0 right-0 px-4 py-3 border-t border-gray-100 bg-white">
+        <div class="flex items-center gap-2 text-xs text-gray-400">
+            <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <span class="leading-tight">
+                Props. actualizadas<br>
+                <span id="lastUpdateText" class="text-gray-500 font-medium">cargando…</span>
+            </span>
+        </div>
+    </div>
+
 </aside>
 
 <script>
@@ -217,4 +230,25 @@ if (document.getElementById('alertsBadge')) {
     updateAlertsBadge();
     setInterval(updateAlertsBadge, 120000); // 2 minutos
 }
+
+// Última actualización de propiedades
+async function updateLastUpdate() {
+    const el = document.getElementById('lastUpdateText');
+    if (!el) return;
+    try {
+        const res = await fetch('/api/properties/last-update');
+        const data = await res.json();
+        if (data.last_update) {
+            const d = new Date(data.last_update);
+            const pad = n => String(n).padStart(2, '0');
+            el.textContent = pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear()
+                + ' · ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+        } else {
+            el.textContent = 'sin datos';
+        }
+    } catch {
+        el.textContent = 'no disponible';
+    }
+}
+updateLastUpdate();
 </script>

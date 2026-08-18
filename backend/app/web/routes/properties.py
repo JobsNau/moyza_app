@@ -26,6 +26,7 @@ from app.models.agent import Agent
 from app.models.property_price_history import PropertyPriceHistory
 from app.models.property_interaction import PropertyInteraction
 from app.models.property_status_history import PropertyStatusHistory
+from app.models.property_change_log import PropertyChangeLog
 from app.models.property_visit import PropertyVisit
 from app.models.report import Report
 from app.services.ai_valuation import AIValuationService
@@ -41,6 +42,94 @@ from app.web.dependencies.auth import is_admin, get_agent_from_user, deny_if_not
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+# Etiquetas legibles para cada campo de propiedad
+_FIELD_LABELS = {
+    "title": "Título",
+    "price": "Precio",
+    "status": "Estado",
+    "address": "Dirección",
+    "city": "Ciudad",
+    "description": "Descripción",
+    "client_id": "Cliente",
+    "agent_id": "Agente",
+    "referencia": "Referencia",
+    "codigo": "Código",
+    "ref_catastral": "Ref. catastral",
+    "property_type": "Tipo de inmueble",
+    "business_type": "Operación",
+    "estado_inmueble": "Estado del inmueble",
+    "situacion": "Situación",
+    "pais": "País",
+    "zona": "Zona",
+    "planta": "Planta",
+    "cod_postal": "Código postal",
+    "moneda": "Moneda",
+    "m2_utiles": "M2 útiles",
+    "m2_construidos": "M2 construidos",
+    "num_dormitorios": "Dormitorios",
+    "num_banos_aseos": "Baños y aseos",
+    "num_salones": "Salones",
+    "num_terrazas": "Terrazas",
+    "num_armarios": "Armarios",
+    "num_garaje_aparcam": "Garaje / Aparcamiento",
+    "num_ascensores": "Ascensores",
+    "num_despachos": "Despachos",
+    "num_locales": "Locales",
+    "llaves": "Llaves",
+    "mandato_acuerdo": "Mandato / Acuerdo",
+    "fecha_alta": "Fecha de alta",
+    "auto_send_report": "Envío automático",
+    "report_frequency": "Frecuencia informe",
+    "report_day": "Día informe",
+    "report_hour": "Hora informe",
+}
+
+
+def _str(value) -> str:
+    """Convierte cualquier valor a string normalizado para comparar."""
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def _build_change_logs(property_obj, new_values: dict, user_id: int, db) -> list:
+    """Compara valores actuales del modelo con los nuevos y devuelve logs de cambio."""
+    from app.models.client import Client
+    from app.models.agent import Agent
+
+    logs = []
+    for field, new_val in new_values.items():
+        old_val = getattr(property_obj, field, None)
+
+        old_str = _str(old_val)
+        new_str = _str(new_val)
+
+        if old_str == new_str:
+            continue
+
+        # Para FKs mostramos el nombre en lugar del ID
+        if field == "client_id":
+            old_client = db.query(Client).filter(Client.id == old_val).first() if old_val else None
+            new_client = db.query(Client).filter(Client.id == new_val).first() if new_val else None
+            old_str = old_client.name if old_client else old_str
+            new_str = new_client.name if new_client else new_str
+        elif field == "agent_id":
+            old_agent = db.query(Agent).filter(Agent.id == old_val).first() if old_val else None
+            new_agent = db.query(Agent).filter(Agent.id == new_val).first() if new_val else None
+            old_str = old_agent.name if old_agent else old_str
+            new_str = new_agent.name if new_agent else new_str
+
+        logs.append(PropertyChangeLog(
+            property_id=property_obj.id,
+            field_name=field,
+            field_label=_FIELD_LABELS.get(field, field),
+            old_value=old_str or None,
+            new_value=new_str or None,
+            changed_by_id=user_id,
+        ))
+
+    return logs
 
 templates = Jinja2Templates(
     directory="app/web/templates"
@@ -228,46 +317,53 @@ async def update_property(
         return response
 
     try:
+        user_id = request.state.user.id
         old_price = property.price
         old_status = property.status
 
-        property.title = title
-        property.price = price
-        property.client_id = client_id
-        property.agent_id = agent_id
-        property.address = address
-        property.city = city
-        property.description = description
-        property.status = status
-        property.auto_send_report = auto_send_report
-        property.report_frequency = report_frequency
-        property.report_day = report_day
-        property.report_hour = report_hour
+        # Todos los campos nuevos en un dict para comparar antes de aplicar
+        new_core = {
+            "title": title,
+            "price": price,
+            "client_id": client_id,
+            "agent_id": agent_id,
+            "address": address,
+            "city": city,
+            "description": description,
+            "status": status,
+            "auto_send_report": auto_send_report,
+            "report_frequency": report_frequency,
+            "report_day": report_day,
+            "report_hour": report_hour,
+        }
+        all_new = {**new_core, **external_fields}
 
-        for field, value in external_fields.items():
+        change_logs = _build_change_logs(property, all_new, user_id, db)
+
+        # Aplicar cambios al modelo
+        for field, value in all_new.items():
             setattr(property, field, value)
 
+        # Historial de precio (tabla existente, se mantiene)
         if old_price != price:
-
-            history = PropertyPriceHistory(
+            db.add(PropertyPriceHistory(
                 property_id=property_id,
                 old_price=old_price,
                 new_price=price,
                 reason="Actualización manual"
-            )
+            ))
 
-            db.add(history)
-
+        # Historial de estado (tabla existente, se mantiene)
         if old_status != status:
-
-            history = PropertyStatusHistory(
+            db.add(PropertyStatusHistory(
                 property_id=property_id,
                 old_status=old_status,
                 new_status=status,
-                changed_by=request.state.user.id
-            )
+                changed_by=user_id
+            ))
 
-            db.add(history)
+        for log in change_logs:
+            db.add(log)
 
         db.commit()
 
@@ -278,11 +374,8 @@ async def update_property(
         set_flash(response, "error", "Ocurrió un error al actualizar la propiedad")
         return response
 
-    response = RedirectResponse(url="/properties", status_code=302)
-    if old_price != price:
-        set_flash(response, "success", "Precio actualizado correctamente")
-    else:
-        set_flash(response, "success", "Propiedad actualizada correctamente")
+    response = RedirectResponse(url=f"/properties/{property_id}", status_code=302)
+    set_flash(response, "success", "Propiedad actualizada correctamente")
     return response
 
 @router.post("/properties/delete/{property_id}")
@@ -309,16 +402,25 @@ async def delete_property(
 
     try:
         old_status = property.status
+        user_id = request.state.user.id
         property.status = PropertyStatus.ARCHIVED
 
-        history = PropertyStatusHistory(
+        db.add(PropertyStatusHistory(
             property_id=property_id,
             old_status=old_status,
             new_status=PropertyStatus.ARCHIVED,
-            changed_by=request.state.user.id
-        )
+            changed_by=user_id
+        ))
 
-        db.add(history)
+        db.add(PropertyChangeLog(
+            property_id=property_id,
+            field_name="status",
+            field_label="Estado",
+            old_value=old_status,
+            new_value=PropertyStatus.ARCHIVED,
+            changed_by_id=user_id,
+        ))
+
         db.commit()
 
     except Exception:
@@ -392,6 +494,15 @@ async def property_detail(
         .all()
     )
 
+    from sqlalchemy.orm import joinedload as _jl
+    change_log = (
+        db.query(PropertyChangeLog)
+        .options(_jl(PropertyChangeLog.changed_by))
+        .filter(PropertyChangeLog.property_id == property_id)
+        .order_by(PropertyChangeLog.created_at.desc())
+        .all()
+    )
+
     visits_registered = (
         db.query(PropertyVisit)
         .filter(
@@ -431,6 +542,7 @@ async def property_detail(
             "interesados": report_data["interesados"],
             "ofertas": report_data["ofertas"],
             "status_history": status_history,
+            "change_log": change_log,
             "visits_registered": visits_registered,
             "interest_avg": visit_summary["interest_avg"],
             "price_high_count": visit_summary["price_high_count"],

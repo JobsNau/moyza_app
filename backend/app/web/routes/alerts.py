@@ -130,8 +130,31 @@ async def alerts_page(
     if is_admin(current_user):
         agents = db.query(Agent).all()
 
-    # Lista de compradores (visible para todos)
-    buyers = db.query(Buyer).order_by(Buyer.name.asc()).all()
+    # Lista de compradores: admin ve todos; agente solo los suyos
+    if is_admin(current_user):
+        buyers = db.query(Buyer).order_by(Buyer.name.asc()).all()
+    else:
+        agent = get_agent_from_user(current_user, db)
+        if agent:
+            buyers_via_criteria = (
+                db.query(Buyer.id)
+                .join(BuyerSearchCriteria, BuyerSearchCriteria.buyer_id == Buyer.id)
+                .filter(BuyerSearchCriteria.agent_id == agent.id)
+            )
+            buyers_via_alerts = (
+                db.query(Buyer.id)
+                .join(PropertyAlert, PropertyAlert.buyer_id == Buyer.id)
+                .filter(PropertyAlert.agent_id == agent.id)
+            )
+            buyer_ids = buyers_via_criteria.union(buyers_via_alerts).subquery()
+            buyers = (
+                db.query(Buyer)
+                .filter(Buyer.id.in_(buyer_ids))
+                .order_by(Buyer.name.asc())
+                .all()
+            )
+        else:
+            buyers = []
 
     # Valores para selectores del modal de criteria
     zones = [
@@ -544,6 +567,7 @@ async def create_alert(
     alert_type: str = Form(AlertType.LEAD_INTERES),
     message: str = Form(None),
     priority: str = Form(AlertPriority.NORMAL),
+    business_type: str = Form(None),
     db: Session = Depends(get_db)
 ):
     """Crear nueva alerta con comprador existente o nuevo (solo admin)"""
@@ -607,6 +631,7 @@ async def create_alert(
             alert_type=alert_type,
             message=message,
             priority=priority,
+            business_type=business_type or None,
             status=AlertStatus.PENDING,
             created_by=current_user.id
         )
@@ -1096,9 +1121,32 @@ async def buyer_detail(
 
     buyer = db.query(Buyer).filter(Buyer.id == buyer_id).first()
     if not buyer:
-        response = RedirectResponse(url="/alerts?tab=buyers", status_code=302)
+        response = RedirectResponse(url="/alerts", status_code=302)
         set_flash(response, "error", "Comprador no encontrado")
         return response
+
+    # Agente solo puede ver compradores relacionados con él
+    if not is_admin(current_user):
+        agent = get_agent_from_user(current_user, db)
+        has_access = False
+        if agent:
+            via_criteria = (
+                db.query(BuyerSearchCriteria)
+                .filter(BuyerSearchCriteria.buyer_id == buyer_id,
+                        BuyerSearchCriteria.agent_id == agent.id)
+                .first()
+            )
+            via_alert = (
+                db.query(PropertyAlert)
+                .filter(PropertyAlert.buyer_id == buyer_id,
+                        PropertyAlert.agent_id == agent.id)
+                .first()
+            )
+            has_access = bool(via_criteria or via_alert)
+        if not has_access:
+            response = RedirectResponse(url="/alerts", status_code=302)
+            set_flash(response, "error", "No tienes acceso a este comprador")
+            return response
 
     criteria = buyer.search_criteria
 

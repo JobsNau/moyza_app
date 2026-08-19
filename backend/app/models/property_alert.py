@@ -101,6 +101,11 @@ class PropertyAlert(Base):
         nullable=True
     )
 
+    business_type = Column(
+        String,
+        nullable=True
+    )
+
     # Relaciones
     property = relationship(
         "Property",

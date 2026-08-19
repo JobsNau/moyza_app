@@ -113,6 +113,7 @@
                                 <th class="text-left px-6 py-4 text-sm font-semibold text-gray-600">Propiedad</th>
                                 <th class="text-left px-6 py-4 text-sm font-semibold text-gray-600">Comprador</th>
                                 <th class="text-left px-6 py-4 text-sm font-semibold text-gray-600">Origen</th>
+                                <th class="text-center px-6 py-4 text-sm font-semibold text-gray-600">Operación</th>
                                 <th class="text-center px-6 py-4 text-sm font-semibold text-gray-600">Prioridad</th>
                                 <th class="text-center px-6 py-4 text-sm font-semibold text-gray-600">Estado</th>
                                 <th class="text-left px-6 py-4 text-sm font-semibold text-gray-600">Fecha</th>
@@ -143,6 +144,17 @@
 
                                     <td class="px-6 py-4 text-sm text-gray-600">
                                         {{ alert.source or '-' }}
+                                    </td>
+
+                                    <td class="px-6 py-4 text-center">
+                                        {% if alert.business_type %}
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                            {% if alert.business_type == 'Venta' %}bg-green-100 text-green-800
+                                            {% elif alert.business_type == 'Alquiler' %}bg-purple-100 text-purple-800
+                                            {% else %}bg-gray-100 text-gray-700{% endif %}">
+                                            {{ alert.business_type }}
+                                        </span>
+                                        {% else %}<span class="text-gray-400 text-xs">—</span>{% endif %}
                                     </td>
 
                                     <td class="px-6 py-4 text-center">
@@ -518,10 +530,19 @@
                         class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Operación</label>
+                        <select name="business_type" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                            <option value="">Sin especificar</option>
+                            <option value="Venta">Venta</option>
+                            <option value="Alquiler">Alquiler</option>
+                            <option value="Ambas">Ambas</option>
+                        </select>
+                    </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
-                        <select name="alert_type" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <select name="alert_type" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
                             <option value="LEAD_INTERES">Lead Interesado</option>
                             <option value="VISITA_SOLICITADA">Visita Solicitada</option>
                             <option value="CAMBIO_PRECIO">Cambio de Precio</option>
@@ -530,7 +551,7 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Prioridad</label>
-                        <select name="priority" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <select name="priority" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
                             <option value="NORMAL">Normal</option>
                             <option value="ALTA">Alta</option>
                             <option value="BAJA">Baja</option>

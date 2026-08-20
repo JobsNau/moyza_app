@@ -10,7 +10,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.responses import RedirectResponse
 from fastapi.responses import JSONResponse
 
-from fastapi.templating import Jinja2Templates
+from app.web.template_env import templates
 
 from sqlalchemy.orm import Session
 from sqlalchemy import func, case, or_
@@ -36,9 +36,6 @@ from app.web.dependencies.auth import is_admin, get_agent_from_user, require_adm
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-templates = Jinja2Templates(
-    directory="app/web/templates"
-)
 
 # Estados que se consideran "abiertos" para la cola secuencial del agente
 OPEN_ALERT_STATUSES = [AlertStatus.PENDING, AlertStatus.IN_PROGRESS]

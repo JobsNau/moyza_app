@@ -10,16 +10,13 @@ from fastapi import Depends
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
+from app.web.template_env import templates
 from app.db.deps import get_db
 from fastapi import Form
 from fastapi.responses import RedirectResponse
 
 router = APIRouter()
 
-templates = Jinja2Templates(
-    directory="app/web/templates"
-)
 
 
 @router.get("/clients", response_class=HTMLResponse)

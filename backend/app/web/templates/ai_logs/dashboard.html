@@ -253,7 +253,7 @@ async function loadLogs() {
         const tbody = document.getElementById('logs-table-body');
         if (data.logs && data.logs.length > 0) {
             tbody.innerHTML = data.logs.map(log => {
-                const date = new Date(log.created_at);
+                const date = new Date(log.created_at + 'Z');
                 const statusBadge = log.status === 'success'
                     ? '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">✓ OK</span>'
                     : '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">✗ Error</span>';
@@ -265,7 +265,7 @@ async function loadLogs() {
                 return `
                     <tr class="border-b border-gray-100 hover:bg-gray-50">
                         <td class="px-6 py-3 text-xs text-gray-700">
-                            ${date.toLocaleDateString('es-ES')} ${date.toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'})}
+                            ${date.toLocaleDateString('es-ES', {timeZone: 'Europe/Madrid'})} ${date.toLocaleTimeString('es-ES', {timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit'})}
                         </td>
                         <td class="px-6 py-3 text-xs text-gray-700">
                             ${log.property_title || `Propiedad #${log.property_id}`}

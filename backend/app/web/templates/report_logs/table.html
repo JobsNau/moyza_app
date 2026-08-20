@@ -95,7 +95,7 @@
                     </td>
 
                     <td class="px-6 py-4 text-sm text-gray-600">
-                        {{ log.job_run_at.strftime('%Y-%m-%d %H:%M') if log.job_run_at else '-' }}
+                        {{ log.job_run_at | madrid_dt('%Y-%m-%d %H:%M') if log.job_run_at else '-' }}
                     </td>
 
                     <td class="px-6 py-4 text-sm text-gray-600">

@@ -128,7 +128,7 @@
                                 {{ (agent.zone or "") | tojson }},
                                 {{ (agent.company or "") | tojson }},
                                 {{ (agent.signature_filepath or "") | tojson }},
-                                {{ (agent.signature_uploaded_at.strftime("%d/%m/%Y %H:%M") if agent.signature_uploaded_at else "") | tojson }}
+                                {{ (agent.signature_uploaded_at | madrid_dt("%d/%m/%Y %H:%M") if agent.signature_uploaded_at else "") | tojson }}
                             )'
                         >
                             <span class="hidden sm:inline">Editar</span>

@@ -9,7 +9,7 @@ from fastapi import Form
 from fastapi.responses import HTMLResponse
 from fastapi.responses import RedirectResponse
 
-from fastapi.templating import Jinja2Templates
+from app.web.template_env import templates
 
 from sqlalchemy import or_, cast, Integer, case, func
 from fastapi.responses import JSONResponse
@@ -131,9 +131,6 @@ def _build_change_logs(property_obj, new_values: dict, user_id: int, db) -> list
 
     return logs
 
-templates = Jinja2Templates(
-    directory="app/web/templates"
-)
 
 @router.get("/properties", response_class=HTMLResponse)
 async def properties_page(
@@ -688,12 +685,14 @@ async def properties_last_update(
     """Última actividad sobre propiedades: precio, estado o interacción."""
     from app.models.property_price_history import PropertyPriceHistory
     from app.models.property_status_history import PropertyStatusHistory
+    from app.models.property_change_log import PropertyChangeLog
 
     t1 = db.query(func.max(PropertyPriceHistory.created_at)).scalar()
     t2 = db.query(func.max(PropertyStatusHistory.created_at)).scalar()
     t3 = db.query(func.max(Property.market_entry_date)).scalar()
+    t4 = db.query(func.max(PropertyChangeLog.created_at)).scalar()
 
-    candidates = [t for t in [t1, t2, t3] if t is not None]
+    candidates = [t for t in [t1, t2, t3, t4] if t is not None]
     result = max(candidates) if candidates else None
 
     return JSONResponse({

@@ -116,7 +116,7 @@
                                     {{ follow_up_labels.get(follow_up.action_type, follow_up.action_type) }}
                                 </span>
                                 <span class="text-sm text-gray-500">
-                                    {{ follow_up.created_at.strftime('%d/%m/%Y %H:%M') if follow_up.created_at else '-' }}
+                                    {{ follow_up.created_at | madrid_dt('%d/%m/%Y %H:%M') if follow_up.created_at else '-' }}
                                 </span>
                             </div>
 
@@ -126,7 +126,7 @@
 
                             {% if follow_up.next_action_date %}
                             <p class="text-xs text-gray-500 mt-2">
-                                Próxima acción: {{ follow_up.next_action_date.strftime('%d/%m/%Y %H:%M') }}
+                                Próxima acción: {{ follow_up.next_action_date | madrid_dt('%d/%m/%Y %H:%M') }}
                             </p>
                             {% endif %}
                         </div>
@@ -172,7 +172,7 @@
                         <div>
                             <label class="text-sm text-gray-600">Fecha Creación</label>
                             <p class="text-gray-800 text-sm">
-                                {{ alert.created_at.strftime('%d/%m/%Y %H:%M') if alert.created_at else '-' }}
+                                {{ alert.created_at | madrid_dt('%d/%m/%Y %H:%M') if alert.created_at else '-' }}
                             </p>
                         </div>
 
@@ -180,7 +180,7 @@
                         <div>
                             <label class="text-sm text-gray-600">Leída</label>
                             <p class="text-gray-800 text-sm">
-                                {{ alert.read_at.strftime('%d/%m/%Y %H:%M') }}
+                                {{ alert.read_at | madrid_dt('%d/%m/%Y %H:%M') }}
                             </p>
                         </div>
                         {% endif %}
@@ -189,7 +189,7 @@
                         <div>
                             <label class="text-sm text-gray-600">Completada</label>
                             <p class="text-gray-800 text-sm">
-                                {{ alert.completed_at.strftime('%d/%m/%Y %H:%M') }}
+                                {{ alert.completed_at | madrid_dt('%d/%m/%Y %H:%M') }}
                             </p>
                         </div>
                         {% endif %}

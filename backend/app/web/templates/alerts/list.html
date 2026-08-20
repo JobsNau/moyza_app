@@ -201,7 +201,7 @@
                                     </td>
 
                                     <td class="px-6 py-4 text-sm text-gray-600">
-                                        {{ alert.created_at.strftime('%d/%m/%Y %H:%M') if alert.created_at else '-' }}
+                                        {{ alert.created_at | madrid_dt('%d/%m/%Y %H:%M') if alert.created_at else '-' }}
                                     </td>
 
                                     <td class="px-6 py-4 text-center">
@@ -305,7 +305,7 @@
                                         </span>
                                     </td>
                                     <td class="px-6 py-4 text-sm text-gray-500">
-                                        {{ buyer.created_at.strftime('%d/%m/%Y') if buyer.created_at else '-' }}
+                                        {{ buyer.created_at | madrid_dt('%d/%m/%Y') if buyer.created_at else '-' }}
                                     </td>
                                     {% if request.state.user.role.name.lower() == 'admin' %}
                                     <td class="px-6 py-4 text-center">

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, Depends, Query
 from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.templating import Jinja2Templates
+from app.web.template_env import templates
 from sqlalchemy.orm import Session
 from typing import Optional
 
@@ -12,7 +12,6 @@ from app.services.report_job_service import ReportJobService
 
 router = APIRouter()
 
-templates = Jinja2Templates(directory="app/web/templates")
 
 
 @router.get("/report-logs", response_class=HTMLResponse)

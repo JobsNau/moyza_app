@@ -13,7 +13,7 @@ from fastapi import UploadFile
 from fastapi.responses import HTMLResponse
 from fastapi.responses import RedirectResponse
 
-from fastapi.templating import Jinja2Templates
+from app.web.template_env import templates
 
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
@@ -29,9 +29,6 @@ from app.web.dependencies.auth import is_admin, get_agent_from_user, deny_if_not
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-templates = Jinja2Templates(
-    directory="app/web/templates"
-)
 
 
 def _clean(value):

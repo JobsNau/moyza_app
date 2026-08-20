@@ -164,7 +164,7 @@
 
                                 <td class="px-6 py-4 text-sm text-gray-600">
                                     {% if item.last_activity %}
-                                        {{ item.last_activity.strftime('%d/%m/%Y') }}
+                                        {{ item.last_activity | madrid_dt('%d/%m/%Y') }}
                                     {% else %}
                                         <span class="text-gray-400">-</span>
                                     {% endif %}

@@ -277,7 +277,7 @@ Detalle Propiedad
 
         {% if property.market_entry_date %}
             <p class="text-base sm:text-lg font-semibold mt-1 sm:mt-2">
-                {{ property.market_entry_date.strftime('%d/%m/%Y') }}
+                {{ property.market_entry_date | madrid_dt('%d/%m/%Y') }}
             </p>
         {% else %}
             <p class="text-gray-400 mt-1 sm:mt-2">No definido</p>
@@ -399,7 +399,7 @@ Detalle Propiedad
         {{ field("Código", property.codigo) }}
         {{ field("Ref. catastral", property.ref_catastral) }}
         {{ field("Llaves", property.llaves) }}
-        {{ field("Fecha de alta", property.fecha_alta.strftime('%d/%m/%Y') if property.fecha_alta else None) }}
+        {{ field("Fecha de alta", property.fecha_alta | madrid_dt('%d/%m/%Y') if property.fecha_alta else None) }}
 
     </div>
 
@@ -448,7 +448,7 @@ Detalle Propiedad
                         {% for item in interactions %}
                         <tr class="border-b border-gray-100 hover:bg-gray-50">
                             <td class="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-700 whitespace-nowrap">
-                                {{ item.created_at.strftime('%d/%m/%Y %H:%M') }}
+                                {{ item.created_at | madrid_dt('%d/%m/%Y %H:%M') }}
                             </td>
                             <td class="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-700 whitespace-nowrap">
                                 {{ item.interaction_type }}
@@ -498,7 +498,7 @@ Detalle Propiedad
                         {% for item in history %}
                         <tr class="border-b border-gray-100 hover:bg-gray-50">
                             <td class="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-700 whitespace-nowrap">
-                                {{ item.created_at.strftime('%d/%m/%Y %H:%M') }}
+                                {{ item.created_at | madrid_dt('%d/%m/%Y %H:%M') }}
                             </td>
                             <td class="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-700 whitespace-nowrap">
                                 {% if item.old_price is not none %}{{ "{:,.0f}".format(item.old_price) }}{% else %}-{% endif %}
@@ -553,7 +553,7 @@ Detalle Propiedad
                     {% for report in property_reports %}
                     <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                         <td class="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-700 whitespace-nowrap">
-                            {{ report.created_at.strftime('%d/%m/%Y %H:%M') }}
+                            {{ report.created_at | madrid_dt('%d/%m/%Y %H:%M') }}
                         </td>
                         <td class="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm">
                             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 whitespace-nowrap">
@@ -639,7 +639,7 @@ Detalle Propiedad
                     {% for visit in visits_registered %}
                     <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                         <td class="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-700 whitespace-nowrap">
-                            {{ visit.created_at.strftime('%d/%m/%Y %H:%M') if visit.created_at else '-' }}
+                            {{ visit.created_at | madrid_dt('%d/%m/%Y %H:%M') if visit.created_at else '-' }}
                         </td>
                         <td class="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-700 whitespace-nowrap">
                             {{ visit.visitor_name or '-' }}
@@ -758,7 +758,7 @@ Detalle Propiedad
                     {% for item in change_log %}
                     <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                         <td class="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-500 whitespace-nowrap">
-                            {{ item.created_at.strftime('%d/%m/%Y %H:%M') }}
+                            {{ item.created_at | madrid_dt('%d/%m/%Y %H:%M') }}
                         </td>
                         <td class="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                             <span class="inline-block bg-blue-50 text-blue-700 text-xs font-semibold px-2 py-0.5 rounded">

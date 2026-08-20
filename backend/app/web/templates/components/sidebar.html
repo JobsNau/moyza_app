@@ -239,10 +239,11 @@ async function updateLastUpdate() {
         const res = await fetch('/api/properties/last-update');
         const data = await res.json();
         if (data.last_update) {
-            const d = new Date(data.last_update);
-            const pad = n => String(n).padStart(2, '0');
-            el.textContent = pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear()
-                + ' · ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+            const d = new Date(data.last_update + 'Z');
+            const tz = 'Europe/Madrid';
+            const dateStr = d.toLocaleDateString('es-ES', { timeZone: tz, day: '2-digit', month: '2-digit', year: 'numeric' });
+            const timeStr = d.toLocaleTimeString('es-ES', { timeZone: tz, hour: '2-digit', minute: '2-digit' });
+            el.textContent = dateStr + ' · ' + timeStr;
         } else {
             el.textContent = 'sin datos';
         }

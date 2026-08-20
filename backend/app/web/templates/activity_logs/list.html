@@ -52,7 +52,7 @@
                             </td>
                             <td class="px-6 py-3 text-sm text-gray-600">
                                 {% if stat.last_seen %}
-                                    {{ stat.last_seen.strftime('%d/%m/%Y %H:%M') }}
+                                    {{ stat.last_seen | madrid_dt('%d/%m/%Y %H:%M') }}
                                 {% else %}—{% endif %}
                             </td>
                         </tr>
@@ -94,7 +94,7 @@
                         {% for log in logs %}
                         <tr class="hover:bg-gray-50 transition-colors text-sm">
                             <td class="px-6 py-3 text-gray-500 whitespace-nowrap">
-                                {{ log.created_at.strftime('%d/%m %H:%M:%S') }}
+                                {{ log.created_at | madrid_dt('%d/%m %H:%M:%S') }}
                             </td>
                             <td class="px-6 py-3">
                                 {% if log.user %}

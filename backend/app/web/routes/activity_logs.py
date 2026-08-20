@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
+from app.web.template_env import templates
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, desc
 
@@ -9,7 +9,6 @@ from app.models.user_activity_log import UserActivityLog
 from app.models.user import User
 
 router = APIRouter()
-templates = Jinja2Templates(directory="app/web/templates")
 
 
 @router.get("/activity-logs", response_class=HTMLResponse)

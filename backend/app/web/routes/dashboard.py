@@ -7,7 +7,7 @@ from fastapi.responses import RedirectResponse
 
 from fastapi.responses import HTMLResponse
 
-from fastapi.templating import Jinja2Templates
+from app.web.template_env import templates
 
 from app.web.dependencies.auth import get_current_web_user
 
@@ -15,9 +15,6 @@ from app.models.user import User
 
 router = APIRouter()
 
-templates = Jinja2Templates(
-    directory="app/web/templates"
-)
 
 
 @router.get("/dashboard", response_class=HTMLResponse)

@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from fastapi.responses import HTMLResponse
 from fastapi.responses import RedirectResponse
 
-from fastapi.templating import Jinja2Templates
+from app.web.template_env import templates
 
 from app.db.deps import get_db
 from app.models.user import User
@@ -26,9 +26,6 @@ from app.web.utils.flash import set_flash
 
 router = APIRouter()
 
-templates = Jinja2Templates(
-    directory="app/web/templates"
-)
 
 
 @router.get("/", response_class=HTMLResponse)

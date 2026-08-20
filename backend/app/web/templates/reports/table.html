@@ -56,7 +56,7 @@
                 </td>
 
                 <td class="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm whitespace-nowrap">
-                    {{ report.created_at.strftime('%d/%m/%Y') if report.created_at else '-' }}
+                    {{ report.created_at | madrid_dt('%d/%m/%Y') if report.created_at else '-' }}
                 </td>
 
                 <td class="px-3 sm:px-6 py-3 sm:py-4">

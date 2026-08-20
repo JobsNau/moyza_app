@@ -42,7 +42,7 @@
                 <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
 
                     <td class="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-700 whitespace-nowrap">
-                        {{ visit.created_at.strftime('%d/%m/%Y %H:%M') if visit.created_at else '-' }}
+                        {{ visit.created_at | madrid_dt('%d/%m/%Y %H:%M') if visit.created_at else '-' }}
                     </td>
 
                     <td class="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-700">

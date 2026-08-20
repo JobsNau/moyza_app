@@ -10,7 +10,7 @@ from fastapi import Form
 from fastapi.responses import HTMLResponse
 from fastapi.responses import RedirectResponse
 from fastapi.responses import FileResponse
-from fastapi.templating import Jinja2Templates
+from app.web.template_env import templates
 
 from sqlalchemy.orm import Session
 
@@ -27,9 +27,6 @@ from app.web.dependencies.auth import is_admin, get_agent_from_user
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-templates = Jinja2Templates(
-    directory="app/web/templates"
-)
 
 
 @router.get("/visits", response_class=HTMLResponse)

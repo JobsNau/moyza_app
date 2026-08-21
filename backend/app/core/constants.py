@@ -128,32 +128,110 @@ class AlertStatus:
 
 
 class FollowUpActionType:
-    LLAMADA = "LLAMADA"
+    # Etapas de progresión (avanzan la etapa visible del comprador)
+    PRIMERA_LLAMADA = "PRIMERA_LLAMADA"
+    CONTACTADO = "CONTACTADO"
+    CALIFICADO = "CALIFICADO"
     VISITA_PROGRAMADA = "VISITA_PROGRAMADA"
-    EMAIL_ENVIADO = "EMAIL_ENVIADO"
-    OFERTA_RECIBIDA = "OFERTA_RECIBIDA"
-    SIN_SOLVENCIA_ECONOMICA = "SIN_SOLVENCIA_ECONOMICA"
+    OFERTA = "OFERTA"
+
+    # Acción repetible (no avanza etapa; indica intento fallido de contacto)
+    SIN_RESPUESTA = "SIN_RESPUESTA"
+
+    # Cierres: auto-completan la alerta (éxito o descarte)
+    CERRADO = "CERRADO"
     SIN_INTERES = "SIN_INTERES"
-    NEGOCIACION = "NEGOCIACION"
-    OTRO = "OTRO"
+    SIN_SOLVENCIA_ECONOMICA = "SIN_SOLVENCIA_ECONOMICA"
+
+    # Etapas que cierran la alerta automáticamente al registrarlas
+    CLOSING_STAGES = {"CERRADO", "SIN_INTERES", "SIN_SOLVENCIA_ECONOMICA"}
+
+    # Acciones que no avanzan la etapa de progresión visible
+    REPEATABLE_ACTIONS = {"SIN_RESPUESTA"}
+
+    # Orden numérico de las etapas de progresión
+    STAGE_ORDER = {
+        "PRIMERA_LLAMADA": 1,
+        "CONTACTADO": 2,
+        "CALIFICADO": 3,
+        "VISITA_PROGRAMADA": 4,
+        "OFERTA": 5,
+        "CERRADO": 6,
+        "SIN_INTERES": 6,
+        "SIN_SOLVENCIA_ECONOMICA": 6,
+        "SIN_RESPUESTA": 0,
+    }
 
     @classmethod
     def labels(cls):
-        """Etiquetas legibles para mostrar en formularios e historial."""
         return {
-            cls.LLAMADA: "Llamada",
+            cls.PRIMERA_LLAMADA: "Primera Llamada",
+            cls.SIN_RESPUESTA: "Sin Respuesta",
+            cls.CONTACTADO: "Contactado",
+            cls.CALIFICADO: "Calificado",
             cls.VISITA_PROGRAMADA: "Visita Programada",
-            cls.EMAIL_ENVIADO: "Email Enviado",
-            cls.OFERTA_RECIBIDA: "Oferta Recibida",
-            cls.SIN_SOLVENCIA_ECONOMICA: "Sin Solvencia Económica",
+            cls.OFERTA: "Oferta/Negociación",
+            cls.CERRADO: "Cerrado",
             cls.SIN_INTERES: "Sin Interés",
-            cls.NEGOCIACION: "Negociación",
-            cls.OTRO: "Otro",
+            cls.SIN_SOLVENCIA_ECONOMICA: "Sin Solvencia Económica",
+            # Etiquetas heredadas para registros antiguos
+            "LLAMADA": "Llamada",
+            "EMAIL_ENVIADO": "Email Enviado",
+            "OFERTA_RECIBIDA": "Oferta Recibida",
+            "NEGOCIACION": "Negociación",
+            "OTRO": "Otro",
         }
 
     @classmethod
+    def progression_stages(cls):
+        """Etapas de progresión + acción repetible para el formulario."""
+        return [
+            (cls.PRIMERA_LLAMADA, "Primera Llamada"),
+            (cls.SIN_RESPUESTA, "Sin Respuesta"),
+            (cls.CONTACTADO, "Contactado"),
+            (cls.CALIFICADO, "Calificado"),
+            (cls.VISITA_PROGRAMADA, "Visita Programada"),
+            (cls.OFERTA, "Oferta/Negociación"),
+        ]
+
+    @classmethod
+    def closing_stages(cls):
+        """Etapas de cierre para el formulario."""
+        return [
+            (cls.CERRADO, "Cerrado (éxito)"),
+            (cls.SIN_INTERES, "Sin Interés"),
+            (cls.SIN_SOLVENCIA_ECONOMICA, "Sin Solvencia Económica"),
+        ]
+
+    @classmethod
+    def ordered_stages(cls):
+        """Todas las etapas en orden para el formulario."""
+        return cls.progression_stages() + cls.closing_stages()
+
+    @classmethod
+    def stage_badge_color(cls, value: str) -> str:
+        colors = {
+            "PRIMERA_LLAMADA": "bg-gray-100 text-gray-700",
+            "SIN_RESPUESTA": "bg-amber-100 text-amber-700",
+            "CONTACTADO": "bg-blue-100 text-blue-700",
+            "CALIFICADO": "bg-indigo-100 text-indigo-700",
+            "VISITA_PROGRAMADA": "bg-purple-100 text-purple-700",
+            "OFERTA": "bg-orange-100 text-orange-700",
+            "CERRADO": "bg-green-100 text-green-700",
+            "SIN_INTERES": "bg-red-100 text-red-700",
+            "SIN_SOLVENCIA_ECONOMICA": "bg-red-100 text-red-700",
+            # Legados
+            "LLAMADA": "bg-gray-100 text-gray-700",
+            "EMAIL_ENVIADO": "bg-gray-100 text-gray-700",
+            "OFERTA_RECIBIDA": "bg-orange-100 text-orange-700",
+            "NEGOCIACION": "bg-orange-100 text-orange-700",
+            "OTRO": "bg-gray-100 text-gray-700",
+        }
+        return colors.get(value, "bg-gray-100 text-gray-700")
+
+    @classmethod
     def values(cls):
-        return set(cls.labels().keys())
+        return set(cls.STAGE_ORDER.keys())
 
     @classmethod
     def is_valid(cls, value: str) -> bool:

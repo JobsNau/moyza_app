@@ -112,7 +112,7 @@
                         {% for follow_up in follow_ups %}
                         <div class="border-l-4 border-blue-500 pl-4 py-2">
                             <div class="flex items-center justify-between mb-2">
-                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium {{ stage_badge_color(follow_up.action_type) }}">
                                     {{ follow_up_labels.get(follow_up.action_type, follow_up.action_type) }}
                                 </span>
                                 <span class="text-sm text-gray-500">
@@ -206,18 +206,10 @@
                             <svg class="w-8 h-8 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
                             </svg>
-                            <p class="text-sm text-gray-600">Esta alerta está en cola.</p>
-                            <p class="text-xs text-gray-500 mt-1">Completa tu alerta activa para poder atenderla.</p>
+                            <p class="text-sm text-gray-600">Esta alerta está bloqueada.</p>
+                            <p class="text-xs text-gray-500 mt-1">Registra un seguimiento en la alerta anterior para desbloquearla.</p>
                         </div>
                         {% else %}
-                        {% if not alert.read_at %}
-                        <form method="POST" action="/alerts/{{ alert.id }}/mark-read">
-                            <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
-                                Marcar como Leída
-                            </button>
-                        </form>
-                        {% endif %}
-
                         {% if alert.status != AlertStatus.COMPLETED %}
                         <button
                             onclick="openFollowUpModal()"
@@ -225,26 +217,6 @@
                         >
                             Agregar Seguimiento
                         </button>
-
-                        {% if can_complete %}
-                        <form method="POST" action="/alerts/{{ alert.id }}/complete">
-                            <button type="submit" class="w-full bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium">
-                                Completar Alerta
-                            </button>
-                        </form>
-                        {% else %}
-                        <button
-                            type="button"
-                            disabled
-                            title="Registra al menos un seguimiento para poder cerrar la alerta"
-                            class="w-full bg-gray-200 text-gray-500 px-4 py-2 rounded-lg text-sm font-medium cursor-not-allowed"
-                        >
-                            Completar Alerta
-                        </button>
-                        <p class="text-xs text-gray-500 text-center">
-                            Debes registrar al menos un seguimiento antes de cerrar la alerta.
-                        </p>
-                        {% endif %}
                         {% endif %}
                         {% endif %}
 
@@ -284,22 +256,30 @@
 
             <div class="p-6 space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Acción</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Etapa de Seguimiento</label>
                     <select name="action_type" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                        <option value="{{ FollowUpActionType.LLAMADA }}">{{ follow_up_labels[FollowUpActionType.LLAMADA] }}</option>
-                        <option value="{{ FollowUpActionType.VISITA_PROGRAMADA }}">{{ follow_up_labels[FollowUpActionType.VISITA_PROGRAMADA] }}</option>
-                        <option value="{{ FollowUpActionType.EMAIL_ENVIADO }}">{{ follow_up_labels[FollowUpActionType.EMAIL_ENVIADO] }}</option>
-                        <option value="{{ FollowUpActionType.OFERTA_RECIBIDA }}">{{ follow_up_labels[FollowUpActionType.OFERTA_RECIBIDA] }}</option>
-                        <option value="{{ FollowUpActionType.NEGOCIACION }}">{{ follow_up_labels[FollowUpActionType.NEGOCIACION] }}</option>
-                        <option value="{{ FollowUpActionType.SIN_SOLVENCIA_ECONOMICA }}">{{ follow_up_labels[FollowUpActionType.SIN_SOLVENCIA_ECONOMICA] }}</option>
-                        <option value="{{ FollowUpActionType.SIN_INTERES }}">{{ follow_up_labels[FollowUpActionType.SIN_INTERES] }}</option>
-                        <option value="{{ FollowUpActionType.OTRO }}">{{ follow_up_labels[FollowUpActionType.OTRO] }}</option>
+                        <optgroup label="Seguimiento">
+                            {% for value, label in FollowUpActionType.progression_stages() %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </optgroup>
+                        <optgroup label="Cierre (completa la alerta)">
+                            {% for value, label in FollowUpActionType.closing_stages() %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </optgroup>
                     </select>
+                    <p class="text-xs text-gray-500 mt-1">Las opciones de cierre completan la alerta automáticamente.</p>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Notas</label>
-                    <textarea name="notes" rows="4" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Describe qué ocurrió en este seguimiento..."></textarea>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Notas <span id="notesRequired" class="text-red-500 hidden">*</span>
+                    </label>
+                    <textarea id="followUpNotes" name="notes" rows="4"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        placeholder="Describe qué ocurrió en este seguimiento..."></textarea>
+                    <p id="notesHint" class="text-xs text-gray-500 mt-1 hidden">Obligatorio al cerrar la alerta.</p>
                 </div>
 
                 <div>
@@ -328,6 +308,8 @@
 </div>
 
 <script>
+const CLOSING_STAGES = new Set(['CERRADO', 'SIN_INTERES', 'SIN_SOLVENCIA_ECONOMICA']);
+
 function openFollowUpModal() {
     document.getElementById('followUpModal').classList.remove('hidden');
 }
@@ -335,6 +317,26 @@ function openFollowUpModal() {
 function closeFollowUpModal() {
     document.getElementById('followUpModal').classList.add('hidden');
 }
+
+(function () {
+    const select = document.querySelector('select[name="action_type"]');
+    const notes = document.getElementById('followUpNotes');
+    const required = document.getElementById('notesRequired');
+    const hint = document.getElementById('notesHint');
+    const form = document.querySelector('#followUpModal form');
+
+    if (!select || !notes || !form) return;
+
+    function updateNotesState() {
+        const isClosing = CLOSING_STAGES.has(select.value);
+        notes.required = isClosing;
+        required.classList.toggle('hidden', !isClosing);
+        hint.classList.toggle('hidden', !isClosing);
+    }
+
+    select.addEventListener('change', updateNotesState);
+    updateNotesState();
+})();
 </script>
 
 {% endblock %}

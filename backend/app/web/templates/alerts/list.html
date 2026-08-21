@@ -95,15 +95,74 @@
 
         <!-- Sección: Alertas de Compradores -->
         <div class="mb-8">
-        <div class="flex items-center gap-3 mb-4">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
             <h2 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
                 <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
                 </svg>
                 Alertas de Compradores
+                <span class="bg-gray-200 text-gray-700 text-xs px-2 py-0.5 rounded-full font-medium">{{ alerts|length }}</span>
             </h2>
-            <span class="bg-gray-200 text-gray-700 text-xs px-2 py-0.5 rounded-full font-medium">{{ alerts|length }}</span>
         </div>
+
+        <!-- Búsqueda y filtros -->
+        <form method="GET" action="/alerts" class="bg-white border border-gray-200 rounded-xl p-4 mb-4 space-y-3">
+            <!-- Búsqueda por texto -->
+            <div class="relative">
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+                <input
+                    type="text"
+                    name="q"
+                    value="{{ q }}"
+                    placeholder="Buscar por comprador, teléfono o propiedad..."
+                    class="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+            </div>
+
+            <!-- Filtro por estado (checkboxes) -->
+            <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
+                <span class="text-xs font-medium text-gray-500 uppercase tracking-wide">Estados:</span>
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                    <input type="checkbox" name="status_filter" value="PENDING"
+                        {% if 'PENDING' in status_filter %}checked{% endif %}
+                        class="w-4 h-4 rounded text-yellow-500 border-gray-300 focus:ring-yellow-400">
+                    <span class="text-sm text-gray-700">Pendiente</span>
+                </label>
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                    <input type="checkbox" name="status_filter" value="IN_PROGRESS"
+                        {% if 'IN_PROGRESS' in status_filter %}checked{% endif %}
+                        class="w-4 h-4 rounded text-blue-500 border-gray-300 focus:ring-blue-400">
+                    <span class="text-sm text-gray-700">En Proceso</span>
+                </label>
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                    <input type="checkbox" name="status_filter" value="COMPLETED"
+                        {% if 'COMPLETED' in status_filter %}checked{% endif %}
+                        class="w-4 h-4 rounded text-green-500 border-gray-300 focus:ring-green-400">
+                    <span class="text-sm text-gray-700">Completada</span>
+                </label>
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                    <input type="checkbox" name="status_filter" value="CANCELLED"
+                        {% if 'CANCELLED' in status_filter %}checked{% endif %}
+                        class="w-4 h-4 rounded text-gray-400 border-gray-300 focus:ring-gray-400">
+                    <span class="text-sm text-gray-700">Cancelada</span>
+                </label>
+            </div>
+
+            <!-- Acciones -->
+            <div class="flex gap-2">
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+                    Filtrar
+                </button>
+                {% if q or status_filter %}
+                <a href="/alerts" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors border border-gray-300">
+                    Limpiar filtros
+                </a>
+                {% endif %}
+            </div>
+        </form>
+
         <div id="panel-alerts">
             <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
                 <div class="overflow-x-auto max-h-[480px] overflow-y-auto">
@@ -114,7 +173,7 @@
                                 <th class="text-left px-6 py-4 text-sm font-semibold text-gray-600">Comprador</th>
                                 <th class="text-left px-6 py-4 text-sm font-semibold text-gray-600">Origen</th>
                                 <th class="text-center px-6 py-4 text-sm font-semibold text-gray-600">Operación</th>
-                                <th class="text-center px-6 py-4 text-sm font-semibold text-gray-600">Prioridad</th>
+                                <th class="text-center px-6 py-4 text-sm font-semibold text-gray-600">Etapa</th>
                                 <th class="text-center px-6 py-4 text-sm font-semibold text-gray-600">Estado</th>
                                 <th class="text-left px-6 py-4 text-sm font-semibold text-gray-600">Fecha</th>
                                 <th class="text-center px-6 py-4 text-sm font-semibold text-gray-600">Acciones</th>
@@ -124,7 +183,7 @@
                         <tbody>
                             {% if alerts %}
                                 {% for alert in alerts %}
-                                {% set is_locked = not is_admin and active_alert_id and alert.id != active_alert_id and alert.status in [AlertStatus.PENDING, AlertStatus.IN_PROGRESS] %}
+                                {% set is_locked = not is_admin and alert.id in locked_alert_ids %}
                                 <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors {% if is_locked %}opacity-60{% elif not alert.read_at %}bg-blue-50{% endif %}">
                                     <td class="px-6 py-4 text-sm text-gray-700">
                                         <div class="flex flex-col">
@@ -158,18 +217,13 @@
                                     </td>
 
                                     <td class="px-6 py-4 text-center">
-                                        {% if alert.priority == AlertPriority.ALTA %}
-                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                            Alta
-                                        </span>
-                                        {% elif alert.priority == AlertPriority.NORMAL %}
-                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                            Normal
+                                        {% if alert.id in alert_stages %}
+                                        {% set stage = alert_stages[alert.id] %}
+                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium {{ stage.color }}">
+                                            {{ stage.label }}
                                         </span>
                                         {% else %}
-                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                            Baja
-                                        </span>
+                                        <span class="text-gray-400 text-xs">Sin iniciar</span>
                                         {% endif %}
                                     </td>
 
@@ -208,7 +262,7 @@
                                         <div class="flex items-center justify-center gap-2">
                                             {% if is_locked %}
                                             <span
-                                                title="Completa tu alerta activa para desbloquear esta"
+                                                title="Registra un seguimiento en la alerta anterior para desbloquear esta"
                                                 class="bg-gray-200 text-gray-500 px-4 py-2 rounded-lg text-sm font-medium cursor-not-allowed"
                                             >
                                                 Bloqueada

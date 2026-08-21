@@ -1,10 +1,12 @@
 import logging
 from datetime import datetime
+from typing import List
 
 from fastapi import APIRouter
 from fastapi import Request
 from fastapi import Depends
 from fastapi import Form
+from fastapi import Query
 
 from fastapi.responses import HTMLResponse
 from fastapi.responses import RedirectResponse
@@ -44,31 +46,51 @@ OPEN_ALERT_STATUSES = [AlertStatus.PENDING, AlertStatus.IN_PROGRESS]
 PROPERTY_SEARCH_LIMIT = 15
 
 
-def get_active_alert_id(agent_id: int, db: Session):
-    """Devuelve el id de la alerta 'activa' del agente (cola FIFO).
-
-    La activa es la alerta abierta más antigua (por fecha de creación, y en
-    empate por id). El agente solo puede trabajar/cerrar esta; el resto quedan
-    bloqueadas hasta que la cierre. Retorna None si no tiene alertas abiertas.
-    """
-    active = (
+def _get_agent_open_alerts_ordered(agent_id: int, db: Session):
+    """Devuelve las alertas abiertas del agente ordenadas FIFO."""
+    return (
         db.query(PropertyAlert)
         .filter(
             PropertyAlert.agent_id == agent_id,
             PropertyAlert.status.in_(OPEN_ALERT_STATUSES),
         )
         .order_by(PropertyAlert.created_at.asc(), PropertyAlert.id.asc())
-        .first()
+        .all()
     )
-    return active.id if active else None
+
+
+def _alert_has_followup(alert_id: int, db: Session) -> bool:
+    return (
+        db.query(AlertFollowUp)
+        .filter(AlertFollowUp.alert_id == alert_id)
+        .count()
+    ) > 0
+
+
+def get_locked_alert_ids(agent_id: int, db: Session) -> set:
+    """Devuelve el conjunto de IDs de alertas bloqueadas para un agente.
+
+    Una alerta en la cola está bloqueada si alguna alerta anterior (más antigua)
+    aún no tiene ningún seguimiento registrado. En cuanto el agente registra
+    cualquier seguimiento en la alerta actual, la siguiente se desbloquea.
+    """
+    open_alerts = _get_agent_open_alerts_ordered(agent_id, db)
+    locked = set()
+    all_preceding_started = True
+    for alert in open_alerts:
+        if not all_preceding_started:
+            locked.add(alert.id)
+        else:
+            if not _alert_has_followup(alert.id, db):
+                all_preceding_started = False
+    return locked
 
 
 def is_alert_locked_for_user(alert: PropertyAlert, current_user, db: Session) -> bool:
-    """True si la cola secuencial impide al usuario actuar sobre esta alerta.
+    """True si la alerta está bloqueada para este usuario.
 
-    El admin nunca está bloqueado. Un agente está bloqueado si la alerta no es
-    su alerta activa (la más antigua abierta). Las alertas ya cerradas nunca se
-    consideran bloqueadas: no forman parte de la cola.
+    El admin nunca está bloqueado. Un agente está bloqueado si alguna alerta
+    anterior en su cola no tiene seguimientos. Las alertas cerradas no cuentan.
     """
     if is_admin(current_user):
         return False
@@ -80,13 +102,20 @@ def is_alert_locked_for_user(alert: PropertyAlert, current_user, db: Session) ->
     if not agent:
         return False
 
-    active_id = get_active_alert_id(agent.id, db)
-    return active_id is not None and alert.id != active_id
+    open_alerts = _get_agent_open_alerts_ordered(agent.id, db)
+    for oa in open_alerts:
+        if oa.id == alert.id:
+            return False  # Todas las anteriores tienen seguimiento → accesible
+        if not _alert_has_followup(oa.id, db):
+            return True  # Alerta anterior sin seguimiento → esta está bloqueada
+    return False
 
 
 @router.get("/alerts", response_class=HTMLResponse)
 async def alerts_page(
     request: Request,
+    q: str = Query(default=""),
+    status_filter: List[str] = Query(default=[]),
     db: Session = Depends(get_db)
 ):
     """Lista de alertas - Admin ve todas, agentes solo las suyas"""
@@ -104,6 +133,22 @@ async def alerts_page(
         else:
             # Si no es admin y no tiene agente asociado, no mostrar nada
             base_query = base_query.filter(PropertyAlert.id == -1)
+
+    # Filtro por texto: nombre del comprador, teléfono o título de propiedad
+    if q and q.strip():
+        like = f"%{q.strip()}%"
+        base_query = base_query.filter(
+            or_(
+                PropertyAlert.lead_name.ilike(like),
+                PropertyAlert.lead_phone.ilike(like),
+                Property.title.ilike(like),
+            )
+        )
+
+    # Filtro por estado (multi-select)
+    valid_status_filters = [s for s in status_filter if AlertStatus.is_valid(s)]
+    if valid_status_filters:
+        base_query = base_query.filter(PropertyAlert.status.in_(valid_status_filters))
 
     # Ordenar por prioridad y fecha
     alerts = base_query.order_by(
@@ -175,13 +220,33 @@ async def alerts_page(
         .distinct().order_by(Property.business_type.asc()).all()
     ]
 
-    # Cola secuencial: para un agente, solo la alerta activa (más antigua abierta)
-    # es accionable; el resto se muestran bloqueadas. El admin no tiene cola.
-    active_alert_id = None
+    # Calcular alertas bloqueadas y etapa actual de cada alerta
+    locked_alert_ids = set()
     if not is_admin(current_user):
         agent = get_agent_from_user(current_user, db)
         if agent:
-            active_alert_id = get_active_alert_id(agent.id, db)
+            locked_alert_ids = get_locked_alert_ids(agent.id, db)
+
+    # Etapa actual de cada alerta: último seguimiento de progresión (ignora
+    # SIN_RESPUESTA para no retroceder la etapa visible; si solo hay sin-respuesta,
+    # lo muestra igualmente).
+    alert_stages = {}
+    labels = FollowUpActionType.labels()
+    for alert in alerts:
+        if alert.follow_ups:
+            progression = [
+                f for f in alert.follow_ups
+                if f.action_type not in FollowUpActionType.REPEATABLE_ACTIONS
+            ]
+            latest = max(
+                progression if progression else alert.follow_ups,
+                key=lambda f: f.created_at,
+            )
+            alert_stages[alert.id] = {
+                "value": latest.action_type,
+                "label": labels.get(latest.action_type, latest.action_type),
+                "color": FollowUpActionType.stage_badge_color(latest.action_type),
+            }
 
     return templates.TemplateResponse(
         request=request,
@@ -195,7 +260,8 @@ async def alerts_page(
             "in_progress_count": in_progress_count,
             "completed_count": completed_count,
             "agents": agents,
-            "active_alert_id": active_alert_id,
+            "locked_alert_ids": locked_alert_ids,
+            "alert_stages": alert_stages,
             "is_admin": is_admin(current_user),
             "zones": zones,
             "cities": cities,
@@ -203,7 +269,9 @@ async def alerts_page(
             "business_types": business_types,
             "AlertType": AlertType,
             "AlertPriority": AlertPriority,
-            "AlertStatus": AlertStatus
+            "AlertStatus": AlertStatus,
+            "q": q,
+            "status_filter": valid_status_filters,
         }
     )
 
@@ -530,8 +598,16 @@ async def alert_detail(
         AlertFollowUp.alert_id == alert_id
     ).order_by(AlertFollowUp.created_at.desc()).all()
 
-    # Cola secuencial: si esta no es la alerta activa del agente, se bloquean
-    # las acciones (marcar leída, seguimiento, completar).
+    # Auto-marcar como leída al abrir: solo el agente asignado, solo si está abierta
+    if not is_admin(current_user) and not alert.read_at and alert.status in OPEN_ALERT_STATUSES:
+        agent = get_agent_from_user(current_user, db)
+        if agent and alert.agent_id == agent.id:
+            alert.read_at = datetime.utcnow()
+            if alert.status == AlertStatus.PENDING:
+                alert.status = AlertStatus.IN_PROGRESS
+            db.commit()
+
+    # Cola secuencial: si alguna alerta anterior no tiene seguimiento, bloquear acciones
     alert_locked = is_alert_locked_for_user(alert, current_user, db)
 
     return templates.TemplateResponse(
@@ -547,7 +623,8 @@ async def alert_detail(
             "can_complete": len(follow_ups) > 0,
             "FollowUpActionType": FollowUpActionType,
             "follow_up_labels": FollowUpActionType.labels(),
-            "AlertStatus": AlertStatus
+            "AlertStatus": AlertStatus,
+            "stage_badge_color": FollowUpActionType.stage_badge_color,
         }
     )
 
@@ -673,10 +750,10 @@ async def mark_alert_read(
             set_flash(response, "error", "No tienes permisos para esta alerta")
             return response
 
-    # Cola secuencial: solo se puede trabajar la alerta activa
+    # Cola secuencial: la alerta anterior debe tener al menos un seguimiento
     if is_alert_locked_for_user(alert, current_user, db):
         response = RedirectResponse(url="/alerts", status_code=302)
-        set_flash(response, "error", "Debes completar tu alerta activa antes de atender esta")
+        set_flash(response, "error", "Registra un seguimiento en la alerta anterior para desbloquear esta")
         return response
 
     try:
@@ -739,6 +816,12 @@ async def add_follow_up(
         set_flash(response, "error", "Tipo de acción no válido")
         return response
 
+    # Notas obligatorias al cerrar
+    if action_type in FollowUpActionType.CLOSING_STAGES and not (notes or "").strip():
+        response = RedirectResponse(url=f"/alerts/{alert_id}", status_code=302)
+        set_flash(response, "error", "Debes escribir una nota al cerrar la alerta")
+        return response
+
     try:
         # Parsear fecha si existe
         next_action_date_parsed = None
@@ -761,6 +844,21 @@ async def add_follow_up(
         # Actualizar estado de alerta
         if alert.status == AlertStatus.PENDING:
             alert.status = AlertStatus.IN_PROGRESS
+
+        # Etapas de cierre: completan la alerta automáticamente
+        if action_type in FollowUpActionType.CLOSING_STAGES:
+            alert.status = AlertStatus.COMPLETED
+            alert.completed_at = datetime.utcnow()
+            db.commit()
+            closing_labels = {
+                FollowUpActionType.CERRADO: "Alerta cerrada con éxito",
+                FollowUpActionType.SIN_INTERES: "Alerta cerrada: comprador sin interés",
+                FollowUpActionType.SIN_SOLVENCIA_ECONOMICA: "Alerta cerrada: sin solvencia económica",
+            }
+            msg = closing_labels.get(action_type, "Alerta cerrada correctamente")
+            response = RedirectResponse(url="/alerts", status_code=302)
+            set_flash(response, "success", msg)
+            return response
 
         db.commit()
 
@@ -914,7 +1012,6 @@ async def get_unread_count(
         return JSONResponse(content={"unread_count": 0})
 
     base_query = db.query(PropertyAlert).filter(
-        PropertyAlert.read_at.is_(None),
         PropertyAlert.status.in_([AlertStatus.PENDING, AlertStatus.IN_PROGRESS])
     )
 

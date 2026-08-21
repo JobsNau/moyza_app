@@ -1,6 +1,7 @@
 from app.web.dependencies.auth import get_current_web_user
 from app.web.dependencies.auth import is_admin
 from app.web.dependencies.auth import deny_if_not_admin
+from app.web.dependencies.auth import get_agent_from_user
 from app.models.user import User
 from app.models.client import Client
 from app.models.property import Property
@@ -22,7 +23,26 @@ router = APIRouter()
 @router.get("/clients", response_class=HTMLResponse)
 async def clients_page(request: Request, db: Session = Depends(get_db)):
 
+    current_user = request.state.user
+
     base_query = db.query(Client)
+
+    # Agentes ven solo clientes cuyas propiedades tienen asignadas
+    if not is_admin(current_user):
+        agent = get_agent_from_user(current_user, db)
+        if agent:
+            client_ids = (
+                db.query(Property.client_id)
+                .filter(
+                    Property.agent_id == agent.id,
+                    Property.client_id.isnot(None)
+                )
+                .distinct()
+                .subquery()
+            )
+            base_query = base_query.filter(Client.id.in_(client_ids))
+        else:
+            base_query = base_query.filter(Client.id == -1)
 
     search = (request.query_params.get("search") or "").strip()
 
@@ -36,8 +56,6 @@ async def clients_page(request: Request, db: Session = Depends(get_db)):
         )
 
     clients = base_query.order_by(Client.name).all()
-
-    current_user = request.state.user
 
     error = request.query_params.get("error")
 

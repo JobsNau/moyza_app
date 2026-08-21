@@ -598,6 +598,13 @@ async def alert_detail(
         AlertFollowUp.alert_id == alert_id
     ).order_by(AlertFollowUp.created_at.desc()).all()
 
+    # Cargar nombres de usuarios que registraron cada seguimiento
+    user_ids = {f.created_by for f in follow_ups if f.created_by}
+    follow_up_users = {}
+    if user_ids:
+        users = db.query(User).filter(User.id.in_(user_ids)).all()
+        follow_up_users = {u.id: u.full_name for u in users}
+
     # Auto-marcar como leída al abrir: solo el agente asignado, solo si está abierta
     if not is_admin(current_user) and not alert.read_at and alert.status in OPEN_ALERT_STATUSES:
         agent = get_agent_from_user(current_user, db)
@@ -625,6 +632,13 @@ async def alert_detail(
             "follow_up_labels": FollowUpActionType.labels(),
             "AlertStatus": AlertStatus,
             "stage_badge_color": FollowUpActionType.stage_badge_color,
+            "follow_up_users": follow_up_users,
+            "alert_type_labels": {
+                AlertType.LEAD_INTERES: "Lead Interesado",
+                AlertType.VISITA_SOLICITADA: "Visita Solicitada",
+                AlertType.CAMBIO_PRECIO: "Cambio de Precio",
+                AlertType.OTRO: "Otro",
+            },
         }
     )
 

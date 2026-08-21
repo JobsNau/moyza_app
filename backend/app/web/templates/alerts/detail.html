@@ -64,6 +64,15 @@
                             <p class="text-gray-800 font-medium">{{ alert.source }}</p>
                         </div>
                         {% endif %}
+
+                        {% if alert.alert_type %}
+                        <div>
+                            <label class="text-sm text-gray-600">Tipo</label>
+                            <p class="text-gray-800 font-medium">
+                                {{ alert_type_labels.get(alert.alert_type, alert.alert_type) }}
+                            </p>
+                        </div>
+                        {% endif %}
                     </div>
 
                     {% if alert.message %}
@@ -80,8 +89,10 @@
 
                     <div class="space-y-2">
                         <div>
-                            <label class="text-sm text-gray-600">Título</label>
-                            <p class="text-gray-800 font-medium">{{ alert.property.title }}</p>
+                            <a href="/properties/{{ alert.property.id }}"
+                               class="text-blue-600 hover:underline font-semibold text-base">
+                                {{ alert.property.title }}
+                            </a>
                         </div>
 
                         <div>
@@ -115,9 +126,12 @@
                                 <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium {{ stage_badge_color(follow_up.action_type) }}">
                                     {{ follow_up_labels.get(follow_up.action_type, follow_up.action_type) }}
                                 </span>
-                                <span class="text-sm text-gray-500">
-                                    {{ follow_up.created_at | madrid_dt('%d/%m/%Y %H:%M') if follow_up.created_at else '-' }}
-                                </span>
+                                <div class="text-right">
+                                    <p class="text-xs text-gray-500">{{ follow_up.created_at | madrid_dt('%d/%m/%Y %H:%M') if follow_up.created_at else '-' }}</p>
+                                    {% if follow_up.created_by and follow_up_users.get(follow_up.created_by) %}
+                                    <p class="text-xs text-gray-400">{{ follow_up_users[follow_up.created_by] }}</p>
+                                    {% endif %}
+                                </div>
                             </div>
 
                             {% if follow_up.notes %}

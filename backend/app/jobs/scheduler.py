@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import json
 from pathlib import Path
@@ -10,6 +10,7 @@ from app.core.constants import PropertyStatus
 from app.db.session import SessionLocal
 from app.models.property import Property
 from app.services.report_job_service import ReportJobService
+from app.services.performance_report_service import PerformanceReportService
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +82,49 @@ def check_automatic_reports():
         db.close()
 
 
+def freeze_weekly_reports():
+    """Cada lunes a las 00:01 congela los reportes de la semana anterior."""
+    db = SessionLocal()
+    try:
+        svc = PerformanceReportService(db)
+        today = datetime.utcnow().date()
+        # El lunes de HOY es el inicio de la semana actual;
+        # la semana anterior empezó 7 días antes
+        monday_this_week = today - timedelta(days=today.weekday())
+        monday_prev = monday_this_week - timedelta(days=7)
+        period_start = datetime(monday_prev.year, monday_prev.month, monday_prev.day)
+        _, period_end = svc.week_bounds(period_start)
+        logger.info(f"Congelando reportes semanales: {period_start.date()} – {period_end.date()}")
+        svc.freeze_all_for_period("WEEKLY", period_start, period_end)
+        logger.info("Reportes semanales congelados correctamente")
+    except Exception as e:
+        logger.error(f"Error congelando reportes semanales: {e}", exc_info=True)
+    finally:
+        db.close()
+
+
+def freeze_monthly_reports():
+    """El día 1 de cada mes a las 00:01 congela los reportes del mes anterior."""
+    db = SessionLocal()
+    try:
+        svc = PerformanceReportService(db)
+        today = datetime.utcnow()
+        # Mes anterior
+        if today.month == 1:
+            prev_year, prev_month = today.year - 1, 12
+        else:
+            prev_year, prev_month = today.year, today.month - 1
+        period_start = datetime(prev_year, prev_month, 1)
+        _, period_end = svc.month_bounds(period_start)
+        logger.info(f"Congelando reportes mensuales: {period_start.strftime('%Y-%m')}")
+        svc.freeze_all_for_period("MONTHLY", period_start, period_end)
+        logger.info("Reportes mensuales congelados correctamente")
+    except Exception as e:
+        logger.error(f"Error congelando reportes mensuales: {e}", exc_info=True)
+    finally:
+        db.close()
+
+
 def update_worker_heartbeat():
     """Actualiza el heartbeat de este worker en el archivo compartido."""
     worker_id = os.getenv("WORKER_ID", "unknown")
@@ -147,6 +191,28 @@ def start_scheduler():
         hour="*",
         minute=5,
         id="check_automatic_reports",
+        replace_existing=True
+    )
+
+    # Congelar reportes semanales: cada lunes a las 00:01
+    scheduler.add_job(
+        freeze_weekly_reports,
+        "cron",
+        day_of_week="mon",
+        hour=0,
+        minute=1,
+        id="freeze_weekly_reports",
+        replace_existing=True
+    )
+
+    # Congelar reportes mensuales: día 1 de cada mes a las 00:01
+    scheduler.add_job(
+        freeze_monthly_reports,
+        "cron",
+        day=1,
+        hour=0,
+        minute=1,
+        id="freeze_monthly_reports",
         replace_existing=True
     )
 

@@ -23,3 +23,5 @@ from app.models.buyer import Buyer
 from app.models.buyer_search_criteria import BuyerSearchCriteria
 from app.models.user_activity_log import UserActivityLog
 from app.models.property_change_log import PropertyChangeLog
+from app.models.agent_performance_report import AgentPerformanceReport
+from app.models.agent_performance_target import AgentPerformanceTarget

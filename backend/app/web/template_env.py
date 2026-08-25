@@ -19,3 +19,4 @@ def madrid_dt(value, fmt: str = "%d/%m/%Y %H:%M"):
 
 templates = Jinja2Templates(directory="app/web/templates")
 templates.env.filters["madrid_dt"] = madrid_dt
+templates.env.globals["current_year"] = lambda: datetime.now().year

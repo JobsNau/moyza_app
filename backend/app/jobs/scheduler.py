@@ -246,9 +246,9 @@ def start_scheduler():
     scheduler.add_job(
         send_buyer_reminders,
         "cron",
-        # hour=settings.BUYER_REMINDER_HOUR,
-        hour=3,
-        minute=32,
+        hour=settings.BUYER_REMINDER_HOUR,
+        # hour=3,
+        minute=10,
         id="send_buyer_reminders",
         replace_existing=True
     )

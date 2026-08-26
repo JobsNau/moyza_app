@@ -41,8 +41,9 @@ class Settings:
     # Umbral en horas sin gestión para disparar el recordatorio (default 48h)
     BUYER_REMINDER_HOURS: int = int(os.getenv("BUYER_REMINDER_HOURS", "48"))
 
-    # Hora del día (UTC) en que se ejecuta el recordatorio (default 7 = 7am UTC)
-    BUYER_REMINDER_HOUR: int = int(os.getenv("BUYER_REMINDER_HOUR", "7"))
+
+    # Hora del día (UTC) en que se ejecuta el recordatorio (default 6 = 6am UTC)
+    BUYER_REMINDER_HOUR: int = int(os.getenv("BUYER_REMINDER_HOUR", "6"))
 
     # Habilitar/deshabilitar el recordatorio sin necesidad de eliminar el job
     BUYER_REMINDER_ENABLED: bool = os.getenv("BUYER_REMINDER_ENABLED", "true").lower() in {"1", "true", "yes", "on"}

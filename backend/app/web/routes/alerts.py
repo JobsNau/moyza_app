@@ -1390,6 +1390,56 @@ async def buyer_detail(
     )
 
 
+@router.post("/buyers/{buyer_id}/update-contact")
+async def update_buyer_contact(
+    buyer_id: int,
+    request: Request,
+    name: str = Form(...),
+    phone: str = Form(None),
+    email: str = Form(None),
+    db: Session = Depends(get_db)
+):
+    """Actualiza nombre, teléfono y email del comprador. Accesible para admin y agentes asignados."""
+    current_user = request.state.user
+
+    buyer = db.query(Buyer).filter(Buyer.id == buyer_id).first()
+    if not buyer:
+        response = RedirectResponse(url="/alerts", status_code=302)
+        set_flash(response, "error", "Comprador no encontrado")
+        return response
+
+    if not is_admin(current_user):
+        agent = get_agent_from_user(current_user, db)
+        has_access = False
+        if agent:
+            via_criteria = (
+                db.query(BuyerSearchCriteria)
+                .filter(BuyerSearchCriteria.buyer_id == buyer_id,
+                        BuyerSearchCriteria.agent_id == agent.id)
+                .first()
+            )
+            via_alert = (
+                db.query(PropertyAlert)
+                .filter(PropertyAlert.buyer_id == buyer_id,
+                        PropertyAlert.agent_id == agent.id)
+                .first()
+            )
+            has_access = bool(via_criteria or via_alert)
+        if not has_access:
+            response = RedirectResponse(url="/alerts", status_code=302)
+            set_flash(response, "error", "No tienes acceso a este comprador")
+            return response
+
+    buyer.name = name.strip()
+    buyer.phone = phone.strip() if phone and phone.strip() else None
+    buyer.email = email.strip() if email and email.strip() else None
+    db.commit()
+
+    response = RedirectResponse(url=f"/buyers/{buyer_id}", status_code=303)
+    set_flash(response, "success", "Datos del comprador actualizados correctamente")
+    return response
+
+
 @router.post("/buyers/{buyer_id}/search-criteria")
 async def save_search_criteria(
     buyer_id: int,

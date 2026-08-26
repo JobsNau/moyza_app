@@ -6,11 +6,14 @@ from pathlib import Path
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
+from app.core.config import settings
 from app.core.constants import PropertyStatus
 from app.db.session import SessionLocal
 from app.models.property import Property
 from app.services.report_job_service import ReportJobService
 from app.services.performance_report_service import PerformanceReportService
+from app.services.buyer_reminder_service import run_buyer_reminders
+from app.services.gmail_service import GmailService
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +81,29 @@ def check_automatic_reports():
 
     except Exception as e:
         logger.error(f"Error en check_automatic_reports: {str(e)}", exc_info=True)
+    finally:
+        db.close()
+
+
+def send_buyer_reminders():
+    """Envía recordatorio por email a agentes con compradores sin gestión."""
+    if not settings.BUYER_REMINDER_ENABLED:
+        logger.info("Recordatorio de compradores deshabilitado (BUYER_REMINDER_ENABLED=false)")
+        return
+
+    db = SessionLocal()
+    try:
+        gmail = GmailService(
+            credentials_path=settings.GMAIL_CREDENTIALS_PATH,
+            token_path=settings.GMAIL_TOKEN_PATH,
+        )
+        run_buyer_reminders(
+            db=db,
+            gmail_service=gmail,
+            hours_threshold=settings.BUYER_REMINDER_HOURS,
+        )
+    except Exception as e:
+        logger.error(f"Error en send_buyer_reminders: {e}", exc_info=True)
     finally:
         db.close()
 
@@ -213,6 +239,17 @@ def start_scheduler():
         hour=0,
         minute=1,
         id="freeze_monthly_reports",
+        replace_existing=True
+    )
+
+    # Recordatorio de compradores sin gestión
+    scheduler.add_job(
+        send_buyer_reminders,
+        "cron",
+        # hour=settings.BUYER_REMINDER_HOUR,
+        hour=3,
+        minute=32,
+        id="send_buyer_reminders",
         replace_existing=True
     )
 

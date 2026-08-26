@@ -13,13 +13,13 @@ class AlertReminderLog(Base):
 
     executed_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
 
-    # Guardamos nombre y email directamente para preservar el registro
-    # aunque el agente sea eliminado posteriormente
     agent_id = Column(Integer, ForeignKey("agents.id", ondelete="SET NULL"), nullable=True)
     agent_name = Column(String, nullable=False)
     agent_email = Column(String, nullable=False)
 
-    buyers_count = Column(Integer, nullable=False, default=0)
+    # Una fila por comprador/alerta
+    alert_id = Column(Integer, ForeignKey("property_alerts.id", ondelete="SET NULL"), nullable=True)
+    buyer_name = Column(String, nullable=True)
 
     # SENT = email enviado, SKIPPED = omitido a propósito, ERROR = fallo técnico
     status = Column(String, nullable=False)
@@ -28,3 +28,4 @@ class AlertReminderLog(Base):
     error_message = Column(Text, nullable=True)
 
     agent = relationship("Agent")
+    alert = relationship("PropertyAlert")

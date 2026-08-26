@@ -248,7 +248,7 @@ def start_scheduler():
         "cron",
         # hour=settings.BUYER_REMINDER_HOUR,
         hour=3,
-        minute=17,
+        minute=32,
         id="send_buyer_reminders",
         replace_existing=True
     )

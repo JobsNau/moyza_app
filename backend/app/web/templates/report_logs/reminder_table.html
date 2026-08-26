@@ -6,8 +6,8 @@
             <tr>
                 <th class="px-6 py-4 text-left">ID</th>
                 <th class="px-6 py-4 text-left">Agente</th>
-                <th class="px-6 py-4 text-left">Email</th>
-                <th class="px-6 py-4 text-left">Compradores</th>
+                <th class="px-6 py-4 text-left">Comprador</th>
+                <th class="px-6 py-4 text-left">Alerta</th>
                 <th class="px-6 py-4 text-left">Estado</th>
                 <th class="px-6 py-4 text-left">Detalle</th>
                 <th class="px-6 py-4 text-left">Fecha Ejecución</th>
@@ -27,14 +27,24 @@
 
                     <td class="px-6 py-4">
                         <div class="font-medium text-gray-900">{{ log.agent_name }}</div>
+                        <div class="text-xs text-gray-400">{{ log.agent_email or '—' }}</div>
                     </td>
 
-                    <td class="px-6 py-4 text-sm text-gray-600">
-                        {{ log.agent_email or '—' }}
+                    <td class="px-6 py-4 text-sm text-gray-700">
+                        {{ log.buyer_name or '—' }}
                     </td>
 
-                    <td class="px-6 py-4 text-sm text-gray-700 font-medium">
-                        {{ log.buyers_count }}
+                    <td class="px-6 py-4 text-sm">
+                        {% if log.alert_id %}
+                        <a
+                            href="/alerts/{{ log.alert_id }}"
+                            class="text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                        >
+                            #{{ log.alert_id }}
+                        </a>
+                        {% else %}
+                        <span class="text-gray-400">—</span>
+                        {% endif %}
                     </td>
 
                     <td class="px-6 py-4">

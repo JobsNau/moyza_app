@@ -61,11 +61,9 @@ def get_pending_buyers_by_agent(db: Session, hours_threshold: int) -> dict[int, 
     result: dict[int, list[dict]] = {}
 
     for alert in alerts:
-        last_action = (
-            max(
-                (fu.created_at for fu in alert.follow_ups),
-                default=alert.created_at,
-            )
+        last_action = max(
+            (fu.created_at for fu in alert.follow_ups),
+            default=alert.created_at,
         )
         entry = {
             "alert_id": alert.id,
@@ -76,8 +74,7 @@ def get_pending_buyers_by_agent(db: Session, hours_threshold: int) -> dict[int, 
             "hours_elapsed": int((datetime.utcnow() - last_action).total_seconds() // 3600),
         }
 
-        agent_id = alert.agent_id
-        result.setdefault(agent_id, []).append(entry)
+        result.setdefault(alert.agent_id, []).append(entry)
 
     return result
 
@@ -128,6 +125,7 @@ def run_buyer_reminders(
     """
     Punto de entrada principal llamado desde el scheduler.
     Consulta compradores pendientes y envía un email por agente.
+    Registra una fila en alert_reminder_logs por cada comprador/alerta procesada.
     """
     logger.info(
         f"Iniciando recordatorio de compradores (umbral: {hours_threshold}h, "
@@ -152,50 +150,56 @@ def run_buyer_reminders(
 
     for agent_id, buyers in pending_by_agent.items():
         agent = agents_by_id.get(agent_id)
+
         if not agent:
             logger.warning(f"Agente {agent_id} no encontrado, omitiendo.")
-            db.add(AlertReminderLog(
-                executed_at=executed_at,
-                agent_id=None,
-                agent_name=f"[Desconocido id={agent_id}]",
-                agent_email="",
-                buyers_count=len(buyers),
-                status="SKIPPED",
-                skip_reason="agente_no_encontrado",
-            ))
-            skipped += 1
+            for b in buyers:
+                db.add(AlertReminderLog(
+                    executed_at=executed_at,
+                    agent_id=None,
+                    agent_name=f"[Desconocido id={agent_id}]",
+                    agent_email="",
+                    alert_id=b["alert_id"],
+                    buyer_name=b["buyer_name"],
+                    status="SKIPPED",
+                    skip_reason="agente_no_encontrado",
+                ))
+            skipped += len(buyers)
             continue
 
         if not agent.email:
             logger.warning(
                 f"Agente {agent.name} (id={agent_id}) no tiene email configurado, omitiendo."
             )
-            db.add(AlertReminderLog(
-                executed_at=executed_at,
-                agent_id=agent.id,
-                agent_name=agent.name,
-                agent_email="",
-                buyers_count=len(buyers),
-                status="SKIPPED",
-                skip_reason="sin_email",
-            ))
-            skipped += 1
+            for b in buyers:
+                db.add(AlertReminderLog(
+                    executed_at=executed_at,
+                    agent_id=agent.id,
+                    agent_name=agent.name,
+                    agent_email="",
+                    alert_id=b["alert_id"],
+                    buyer_name=b["buyer_name"],
+                    status="SKIPPED",
+                    skip_reason="sin_email",
+                ))
+            skipped += len(buyers)
             continue
 
         subject = f"[Moyza] {len(buyers)} comprador(es) pendiente(s) de atención"
         body = _build_email_body(agent.name, buyers, hours_threshold)
-
         success = gmail_service.send_email(agent.email, subject, body)
 
-        db.add(AlertReminderLog(
-            executed_at=executed_at,
-            agent_id=agent.id,
-            agent_name=agent.name,
-            agent_email=agent.email,
-            buyers_count=len(buyers),
-            status="SENT" if success else "ERROR",
-            error_message=None if success else "Fallo al enviar via Gmail API",
-        ))
+        for b in buyers:
+            db.add(AlertReminderLog(
+                executed_at=executed_at,
+                agent_id=agent.id,
+                agent_name=agent.name,
+                agent_email=agent.email,
+                alert_id=b["alert_id"],
+                buyer_name=b["buyer_name"],
+                status="SENT" if success else "ERROR",
+                error_message=None if success else "Fallo al enviar via Gmail API",
+            ))
 
         if success:
             sent += 1
@@ -204,5 +208,5 @@ def run_buyer_reminders(
 
     db.commit()
     logger.info(
-        f"Recordatorios completados: {sent} enviados, {skipped} omitidos."
+        f"Recordatorios completados: {sent} agentes notificados, {skipped} omitidos."
     )

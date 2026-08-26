@@ -868,6 +868,7 @@ async def add_follow_up(
                 FollowUpActionType.CERRADO: "Alerta cerrada con éxito",
                 FollowUpActionType.SIN_INTERES: "Alerta cerrada: comprador sin interés",
                 FollowUpActionType.SIN_SOLVENCIA_ECONOMICA: "Alerta cerrada: sin solvencia económica",
+                FollowUpActionType.NO_APTO_PROPIETARIO: "Alerta cerrada: no apto para el propietario",
             }
             msg = closing_labels.get(action_type, "Alerta cerrada correctamente")
             response = RedirectResponse(url="/alerts", status_code=302)

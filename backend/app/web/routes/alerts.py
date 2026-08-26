@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter
 from fastapi import Request
@@ -116,6 +116,7 @@ async def alerts_page(
     request: Request,
     q: str = Query(default=""),
     status_filter: List[str] = Query(default=[]),
+    agent_id: Optional[str] = Query(default=None),
     db: Session = Depends(get_db)
 ):
     """Lista de alertas - Admin ve todas, agentes solo las suyas"""
@@ -149,6 +150,11 @@ async def alerts_page(
     valid_status_filters = [s for s in status_filter if AlertStatus.is_valid(s)]
     if valid_status_filters:
         base_query = base_query.filter(PropertyAlert.status.in_(valid_status_filters))
+
+    # Filtro por agente (solo admin; agentes ya están filtrados por su propio id)
+    agent_id_int = int(agent_id) if agent_id and agent_id.strip() else None
+    if agent_id_int and is_admin(current_user):
+        base_query = base_query.filter(PropertyAlert.agent_id == agent_id_int)
 
     # Ordenar por prioridad y fecha
     alerts = base_query.order_by(
@@ -272,6 +278,7 @@ async def alerts_page(
             "AlertStatus": AlertStatus,
             "q": q,
             "status_filter": valid_status_filters,
+            "selected_agent_id": agent_id_int,
         }
     )
 

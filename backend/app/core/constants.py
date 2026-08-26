@@ -142,9 +142,10 @@ class FollowUpActionType:
     CERRADO = "CERRADO"
     SIN_INTERES = "SIN_INTERES"
     SIN_SOLVENCIA_ECONOMICA = "SIN_SOLVENCIA_ECONOMICA"
+    NO_APTO_PROPIETARIO = "NO_APTO_PROPIETARIO"
 
     # Etapas que cierran la alerta automáticamente al registrarlas
-    CLOSING_STAGES = {"CERRADO", "SIN_INTERES", "SIN_SOLVENCIA_ECONOMICA"}
+    CLOSING_STAGES = {"CERRADO", "SIN_INTERES", "SIN_SOLVENCIA_ECONOMICA", "NO_APTO_PROPIETARIO"}
 
     # Acciones que no avanzan la etapa de progresión visible
     REPEATABLE_ACTIONS = {"SIN_RESPUESTA"}
@@ -159,6 +160,7 @@ class FollowUpActionType:
         "CERRADO": 6,
         "SIN_INTERES": 6,
         "SIN_SOLVENCIA_ECONOMICA": 6,
+        "NO_APTO_PROPIETARIO": 6,
         "SIN_RESPUESTA": 0,
     }
 
@@ -174,6 +176,7 @@ class FollowUpActionType:
             cls.CERRADO: "Cerrado",
             cls.SIN_INTERES: "Sin Interés",
             cls.SIN_SOLVENCIA_ECONOMICA: "Sin Solvencia Económica",
+            cls.NO_APTO_PROPIETARIO: "No apto para el propietario",
             # Etiquetas heredadas para registros antiguos
             "LLAMADA": "Llamada",
             "EMAIL_ENVIADO": "Email Enviado",
@@ -201,6 +204,7 @@ class FollowUpActionType:
             (cls.CERRADO, "Cerrado (éxito)"),
             (cls.SIN_INTERES, "Sin Interés"),
             (cls.SIN_SOLVENCIA_ECONOMICA, "Sin Solvencia Económica"),
+            (cls.NO_APTO_PROPIETARIO, "No apto para el propietario"),
         ]
 
     @classmethod
@@ -220,6 +224,7 @@ class FollowUpActionType:
             "CERRADO": "bg-green-100 text-green-700",
             "SIN_INTERES": "bg-red-100 text-red-700",
             "SIN_SOLVENCIA_ECONOMICA": "bg-red-100 text-red-700",
+            "NO_APTO_PROPIETARIO": "bg-red-100 text-red-700",
             # Legados
             "LLAMADA": "bg-gray-100 text-gray-700",
             "EMAIL_ENVIADO": "bg-gray-100 text-gray-700",

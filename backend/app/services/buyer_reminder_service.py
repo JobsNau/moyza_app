@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.models.agent import Agent
 from app.models.alert_follow_up import AlertFollowUp
+from app.models.alert_reminder_log import AlertReminderLog
 from app.models.property_alert import PropertyAlert
 from app.services.gmail_service import GmailService
 
@@ -147,11 +148,21 @@ def run_buyer_reminders(
     agents_by_id = {a.id: a for a in agents}
 
     sent, skipped = 0, 0
+    executed_at = datetime.utcnow()
 
     for agent_id, buyers in pending_by_agent.items():
         agent = agents_by_id.get(agent_id)
         if not agent:
             logger.warning(f"Agente {agent_id} no encontrado, omitiendo.")
+            db.add(AlertReminderLog(
+                executed_at=executed_at,
+                agent_id=None,
+                agent_name=f"[Desconocido id={agent_id}]",
+                agent_email="",
+                buyers_count=len(buyers),
+                status="SKIPPED",
+                skip_reason="agente_no_encontrado",
+            ))
             skipped += 1
             continue
 
@@ -159,6 +170,15 @@ def run_buyer_reminders(
             logger.warning(
                 f"Agente {agent.name} (id={agent_id}) no tiene email configurado, omitiendo."
             )
+            db.add(AlertReminderLog(
+                executed_at=executed_at,
+                agent_id=agent.id,
+                agent_name=agent.name,
+                agent_email="",
+                buyers_count=len(buyers),
+                status="SKIPPED",
+                skip_reason="sin_email",
+            ))
             skipped += 1
             continue
 
@@ -166,11 +186,23 @@ def run_buyer_reminders(
         body = _build_email_body(agent.name, buyers, hours_threshold)
 
         success = gmail_service.send_email(agent.email, subject, body)
+
+        db.add(AlertReminderLog(
+            executed_at=executed_at,
+            agent_id=agent.id,
+            agent_name=agent.name,
+            agent_email=agent.email,
+            buyers_count=len(buyers),
+            status="SENT" if success else "ERROR",
+            error_message=None if success else "Fallo al enviar via Gmail API",
+        ))
+
         if success:
             sent += 1
         else:
             skipped += 1
 
+    db.commit()
     logger.info(
         f"Recordatorios completados: {sent} enviados, {skipped} omitidos."
     )

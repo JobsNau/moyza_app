@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from typing import Optional
 
 from app.db.deps import get_db
+from app.models.alert_reminder_log import AlertReminderLog
 from app.models.report_job_log import ReportJobLog
 from app.models.property import Property
 from app.models.report import Report
@@ -17,27 +18,26 @@ router = APIRouter()
 @router.get("/report-logs", response_class=HTMLResponse)
 async def report_logs_page(
     request: Request,
+    tab: Optional[str] = Query("reports"),
     status: Optional[str] = Query(None),
     property_id: Optional[int] = Query(None),
     limit: int = Query(50, ge=1, le=500),
+    reminder_status: Optional[str] = Query(None),
     db: Session = Depends(get_db)
 ):
-    """
-    Página para visualizar logs de ejecución de reportes automáticos.
-    """
     query = db.query(ReportJobLog)
-
     if status:
         query = query.filter(ReportJobLog.status == status)
-
     if property_id:
         query = query.filter(ReportJobLog.property_id == property_id)
-
     logs = query.order_by(ReportJobLog.job_run_at.desc()).limit(limit).all()
 
-    properties = db.query(Property).filter(Property.auto_send_report == True).all()
+    reminder_query = db.query(AlertReminderLog)
+    if reminder_status:
+        reminder_query = reminder_query.filter(AlertReminderLog.status == reminder_status)
+    reminder_logs = reminder_query.order_by(AlertReminderLog.executed_at.desc()).limit(limit).all()
 
-    current_user = request.state.user
+    properties = db.query(Property).filter(Property.auto_send_report == True).all()
 
     return templates.TemplateResponse(
         request=request,
@@ -45,10 +45,13 @@ async def report_logs_page(
         context={
             "request": request,
             "logs": logs,
+            "reminder_logs": reminder_logs,
             "properties": properties,
-            "current_user": current_user,
+            "current_user": request.state.user,
             "selected_status": status,
-            "selected_property_id": property_id
+            "selected_property_id": property_id,
+            "selected_reminder_status": reminder_status,
+            "active_tab": tab,
         }
     )
 
@@ -110,6 +113,35 @@ async def retry_failed_report(
         return {"status": "success", "message": f"Reporte reintentado exitosamente"}
     else:
         return {"status": "error", "message": "No se pudo reintentar el reporte"}
+
+
+@router.get("/api/reminder-logs")
+async def get_reminder_logs_api(
+    status: Optional[str] = Query(None),
+    limit: int = Query(50, ge=1, le=500),
+    db: Session = Depends(get_db)
+):
+    query = db.query(AlertReminderLog)
+    if status:
+        query = query.filter(AlertReminderLog.status == status)
+    logs = query.order_by(AlertReminderLog.executed_at.desc()).limit(limit).all()
+    return {
+        "logs": [
+            {
+                "id": log.id,
+                "executed_at": log.executed_at.isoformat() if log.executed_at else None,
+                "agent_id": log.agent_id,
+                "agent_name": log.agent_name,
+                "agent_email": log.agent_email,
+                "buyers_count": log.buyers_count,
+                "status": log.status,
+                "skip_reason": log.skip_reason,
+                "error_message": log.error_message,
+            }
+            for log in logs
+        ],
+        "total": len(logs),
+    }
 
 
 @router.get("/api/report-logs/stats")

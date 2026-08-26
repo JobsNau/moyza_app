@@ -1,0 +1,105 @@
+<div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+
+    <table class="w-full">
+
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="px-6 py-4 text-left">ID</th>
+                <th class="px-6 py-4 text-left">Agente</th>
+                <th class="px-6 py-4 text-left">Email</th>
+                <th class="px-6 py-4 text-left">Compradores</th>
+                <th class="px-6 py-4 text-left">Estado</th>
+                <th class="px-6 py-4 text-left">Detalle</th>
+                <th class="px-6 py-4 text-left">Fecha Ejecución</th>
+            </tr>
+        </thead>
+
+        <tbody>
+
+            {% if reminder_logs %}
+                {% for log in reminder_logs %}
+
+                <tr class="border-b border-gray-100 hover:bg-gray-50">
+
+                    <td class="px-6 py-4 text-sm text-gray-600">
+                        #{{ log.id }}
+                    </td>
+
+                    <td class="px-6 py-4">
+                        <div class="font-medium text-gray-900">{{ log.agent_name }}</div>
+                    </td>
+
+                    <td class="px-6 py-4 text-sm text-gray-600">
+                        {{ log.agent_email or '—' }}
+                    </td>
+
+                    <td class="px-6 py-4 text-sm text-gray-700 font-medium">
+                        {{ log.buyers_count }}
+                    </td>
+
+                    <td class="px-6 py-4">
+                        {% if log.status == 'SENT' %}
+                        <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium">
+                            Enviado
+                        </span>
+                        {% elif log.status == 'SKIPPED' %}
+                        <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium">
+                            Omitido
+                        </span>
+                        {% elif log.status == 'ERROR' %}
+                        <span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-medium">
+                            Error
+                        </span>
+                        {% else %}
+                        <span class="bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-xs font-medium">
+                            {{ log.status }}
+                        </span>
+                        {% endif %}
+                    </td>
+
+                    <td class="px-6 py-4 text-sm text-gray-500">
+                        {% if log.skip_reason == 'sin_email' %}
+                            Sin email configurado
+                        {% elif log.skip_reason == 'agente_no_encontrado' %}
+                            Agente no encontrado
+                        {% elif log.error_message %}
+                        <button
+                            onclick="alert('{{ log.error_message | replace("'", "\\'") }}')"
+                            class="bg-red-100 text-red-600 px-3 py-1 rounded-lg text-xs hover:bg-red-200"
+                        >
+                            Ver error
+                        </button>
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+
+                    <td class="px-6 py-4 text-sm text-gray-600">
+                        {{ log.executed_at | madrid_dt('%Y-%m-%d %H:%M') if log.executed_at else '-' }}
+                    </td>
+
+                </tr>
+
+                {% endfor %}
+
+            {% else %}
+
+                <tr>
+                    <td colspan="7" class="px-6 py-12 text-center text-gray-500">
+                        <div class="flex flex-col items-center gap-3">
+                            <svg class="w-16 h-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                            </svg>
+                            <p class="text-lg font-medium">No hay recordatorios registrados aún</p>
+                            <p class="text-sm">Los registros aparecerán cuando el scheduler ejecute el job de recordatorios</p>
+                        </div>
+                    </td>
+                </tr>
+
+            {% endif %}
+
+        </tbody>
+
+    </table>
+
+</div>

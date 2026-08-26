@@ -81,6 +81,10 @@ async def login(
     password: str = Form(None),
     db: Session = Depends(get_db)):
 
+    # Limpiar espacios del email antes de validar o autenticar
+    if username:
+        username = username.strip()
+
     # Validación amigable
     if not username or not password:
 

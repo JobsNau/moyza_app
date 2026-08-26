@@ -28,6 +28,25 @@ class Settings:
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY")
     GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
 
+    # Gmail OAuth — recordatorio de compradores
+    GMAIL_CREDENTIALS_PATH: str = os.getenv(
+        "GMAIL_CREDENTIALS_PATH",
+        "app/credentials/gmail_credentials.json"
+    )
+    GMAIL_TOKEN_PATH: str = os.getenv(
+        "GMAIL_TOKEN_PATH",
+        "app/credentials/gmail_token.json"
+    )
+
+    # Umbral en horas sin gestión para disparar el recordatorio (default 48h)
+    BUYER_REMINDER_HOURS: int = int(os.getenv("BUYER_REMINDER_HOURS", "48"))
+
+    # Hora del día (UTC) en que se ejecuta el recordatorio (default 7 = 7am UTC)
+    BUYER_REMINDER_HOUR: int = int(os.getenv("BUYER_REMINDER_HOUR", "7"))
+
+    # Habilitar/deshabilitar el recordatorio sin necesidad de eliminar el job
+    BUYER_REMINDER_ENABLED: bool = os.getenv("BUYER_REMINDER_ENABLED", "true").lower() in {"1", "true", "yes", "on"}
+
     @property
     def DATABASE_URL(self):
         return (

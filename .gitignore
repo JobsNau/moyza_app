@@ -48,6 +48,10 @@ htmlcov/
 *.pfx
 *.p12
 
+# Gmail OAuth credentials
+backend/app/credentials/
+!backend/app/credentials/.gitkeep
+
 # --- Docker ---
 # Local overrides
 docker-compose.override.yml

@@ -121,6 +121,21 @@
                 >
             </div>
 
+            <!-- Filtro por agente (solo admin) -->
+            {% if is_admin and agents %}
+            <div class="flex items-center gap-3">
+                <span class="text-xs font-medium text-gray-500 uppercase tracking-wide shrink-0">Agente:</span>
+                <select name="agent_id" class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500">
+                    <option value="">Todos los agentes</option>
+                    {% for agent in agents %}
+                    <option value="{{ agent.id }}" {% if selected_agent_id == agent.id %}selected{% endif %}>
+                        {{ agent.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
             <!-- Filtro por estado (checkboxes) -->
             <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
                 <span class="text-xs font-medium text-gray-500 uppercase tracking-wide">Estados:</span>
@@ -155,7 +170,7 @@
                 <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
                     Filtrar
                 </button>
-                {% if q or status_filter %}
+                {% if q or status_filter or selected_agent_id %}
                 <a href="/alerts" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors border border-gray-300">
                     Limpiar filtros
                 </a>
@@ -171,6 +186,9 @@
                             <tr>
                                 <th class="text-left px-6 py-4 text-sm font-semibold text-gray-600">Propiedad</th>
                                 <th class="text-left px-6 py-4 text-sm font-semibold text-gray-600">Comprador</th>
+                                {% if is_admin %}
+                                <th class="text-left px-6 py-4 text-sm font-semibold text-gray-600">Agente</th>
+                                {% endif %}
                                 <th class="text-left px-6 py-4 text-sm font-semibold text-gray-600">Origen</th>
                                 <th class="text-center px-6 py-4 text-sm font-semibold text-gray-600">Operación</th>
                                 <th class="text-center px-6 py-4 text-sm font-semibold text-gray-600">Etapa</th>
@@ -200,6 +218,12 @@
                                             {% endif %}
                                         </div>
                                     </td>
+
+                                    {% if is_admin %}
+                                    <td class="px-6 py-4 text-sm text-gray-700">
+                                        {{ alert.agent.name if alert.agent else '—' }}
+                                    </td>
+                                    {% endif %}
 
                                     <td class="px-6 py-4 text-sm text-gray-600">
                                         {{ alert.source or '-' }}
@@ -303,7 +327,7 @@
                                 {% endfor %}
                             {% else %}
                                 <tr>
-                                    <td colspan="7" class="px-6 py-12 text-center text-gray-500">
+                                    <td colspan="{{ '9' if is_admin else '8' }}" class="px-6 py-12 text-center text-gray-500">
                                         No hay alertas de compradores registradas
                                     </td>
                                 </tr>

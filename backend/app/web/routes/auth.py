@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+from fastapi import BackgroundTasks
 from fastapi import Request
 from fastapi import Depends
 from fastapi import Form
@@ -20,8 +21,14 @@ from app.models.permission import Permission
 
 from app.services.auth_service import authenticate_user
 from app.core.security import create_access_token
-from app.services.user_service import create_user, delete_user
-from app.schemas.user import UserCreate
+from app.services.user_service import (
+    create_user,
+    delete_user,
+    update_user,
+    change_user_password
+)
+from app.services.user_email_service import send_password_changed_email
+from app.schemas.user import UserCreate, UserUpdate
 from app.web.utils.flash import set_flash
 
 router = APIRouter()
@@ -150,6 +157,7 @@ async def logout():
 @router.post("/auth/users/create")
 async def create_user_endpoint(
     request: Request,
+    background_tasks: BackgroundTasks,
     email: str = Form(...),
     full_name: str = Form(...),
     password: str = Form(...),
@@ -177,12 +185,95 @@ async def create_user_endpoint(
             company=company
         )
 
-        create_user(db, user_data)
-        set_flash(response, "success", "Usuario creado correctamente")
+        create_user(db, user_data, background_tasks)
+        set_flash(response, "success", "Usuario creado correctamente. Se envió el correo de bienvenida.")
 
     except ValidationError as e:
         # Primer mensaje de validación (ej. teléfono con formato no válido)
         set_flash(response, "error", e.errors()[0]["msg"].replace("Value error, ", ""))
+
+    except HTTPException as e:
+        set_flash(response, "error", e.detail)
+
+    return response
+
+
+@router.post("/auth/users/update")
+async def update_user_endpoint(
+    request: Request,
+    user_id: int = Form(...),
+    full_name: str = Form(...),
+    role_id: int = Form(...),
+    phone: str = Form(None),
+    company: str = Form(None),
+    db: Session = Depends(get_db)
+):
+    from app.web.dependencies.auth import require_admin_role
+
+    # Validar que solo admin pueda editar usuarios
+    admin_user = require_admin_role(request, db)
+    if isinstance(admin_user, RedirectResponse):
+        return admin_user
+
+    response = RedirectResponse(url="/auth", status_code=303)
+
+    try:
+        user_data = UserUpdate(
+            full_name=full_name,
+            role_id=role_id,
+            phone=phone,
+            company=company
+        )
+
+        update_user(db, user_id, user_data)
+        set_flash(response, "success", "Usuario actualizado correctamente")
+
+    except ValidationError as e:
+        set_flash(response, "error", e.errors()[0]["msg"].replace("Value error, ", ""))
+
+    except HTTPException as e:
+        set_flash(response, "error", e.detail)
+
+    return response
+
+
+@router.post("/auth/users/password")
+async def change_password_endpoint(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    user_id: int = Form(...),
+    password: str = Form(...),
+    password_confirm: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    from app.web.dependencies.auth import require_admin_role
+
+    # Validar que solo admin pueda cambiar contraseñas
+    admin_user = require_admin_role(request, db)
+    if isinstance(admin_user, RedirectResponse):
+        return admin_user
+
+    response = RedirectResponse(url="/auth", status_code=303)
+
+    if password != password_confirm:
+        set_flash(response, "error", "Las contraseñas no coinciden")
+        return response
+
+    try:
+        user = change_user_password(db, user_id, password)
+
+        background_tasks.add_task(
+            send_password_changed_email,
+            email=user.email,
+            full_name=user.full_name,
+            password=password,
+        )
+
+        set_flash(
+            response,
+            "success",
+            f"Contraseña de {user.full_name} actualizada. Se envió el correo de aviso."
+        )
 
     except HTTPException as e:
         set_flash(response, "error", e.detail)

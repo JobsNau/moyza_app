@@ -48,6 +48,9 @@ class Settings:
     # Habilitar/deshabilitar el recordatorio sin necesidad de eliminar el job
     BUYER_REMINDER_ENABLED: bool = os.getenv("BUYER_REMINDER_ENABLED", "true").lower() in {"1", "true", "yes", "on"}
 
+    # Correo de bienvenida con credenciales al crear un usuario
+    WELCOME_EMAIL_ENABLED: bool = os.getenv("WELCOME_EMAIL_ENABLED", "true").lower() in {"1", "true", "yes", "on"}
+
     @property
     def DATABASE_URL(self):
         return (

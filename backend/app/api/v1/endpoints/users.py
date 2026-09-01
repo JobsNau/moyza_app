@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends
 from app.core.deps import get_current_user, require_role, require_permission
 from sqlalchemy.orm import Session
 
@@ -18,8 +18,12 @@ router = APIRouter()
 
 
 @router.post("/", response_model=UserResponse)
-def create_new_user(user: UserCreate, db: Session = Depends(get_db)):
-    return create_user(db, user)
+def create_new_user(
+    user: UserCreate,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
+    return create_user(db, user, background_tasks)
 
 
 @router.get("/", response_model=list[UserResponse])

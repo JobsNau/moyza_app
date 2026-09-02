@@ -1,3 +1,55 @@
+class PhoneCountryCodes:
+    """Indicativos telefónicos disponibles en el selector de país de teléfonos."""
+
+    # (código, ISO, bandera, nombre)
+    OPTIONS = [
+        ("34", "ES", "🇪🇸", "España"),
+        ("57", "CO", "🇨🇴", "Colombia"),
+        ("52", "MX", "🇲🇽", "México"),
+        ("54", "AR", "🇦🇷", "Argentina"),
+        ("51", "PE", "🇵🇪", "Perú"),
+        ("56", "CL", "🇨🇱", "Chile"),
+        ("593", "EC", "🇪🇨", "Ecuador"),
+        ("58", "VE", "🇻🇪", "Venezuela"),
+        ("1", "US", "🇺🇸", "Estados Unidos"),
+        ("44", "GB", "🇬🇧", "Reino Unido"),
+        ("33", "FR", "🇫🇷", "Francia"),
+        ("49", "DE", "🇩🇪", "Alemania"),
+        ("39", "IT", "🇮🇹", "Italia"),
+        ("351", "PT", "🇵🇹", "Portugal"),
+        ("212", "MA", "🇲🇦", "Marruecos"),
+    ]
+
+    DEFAULT = "34"
+
+    @classmethod
+    def choices(cls):
+        """Lista de (código, bandera, etiqueta) para renderizar el <select>."""
+        return [(code, flag, f"{flag} +{code} {name}") for code, _, flag, name in cls.OPTIONS]
+
+    @classmethod
+    def split(cls, phone):
+        """Separa un teléfono guardado en (código de país, número local).
+
+        Empareja por el indicativo conocido más largo que coincida con el
+        inicio del número. Si no encuentra ninguno (teléfonos guardados antes
+        de existir este selector), asume España y deja el número completo tal
+        cual para que el agente lo revise.
+        """
+        digits = "".join(ch for ch in (phone or "") if ch.isdigit())
+
+        if not digits:
+            return cls.DEFAULT, ""
+
+        candidates = sorted((code for code, *_ in cls.OPTIONS), key=len, reverse=True)
+
+        for code in candidates:
+            if digits.startswith(code) and len(digits) - len(code) >= 6:
+                return code, digits[len(code):]
+
+        return cls.DEFAULT, digits
+
+
 class PropertyStatus:
     ACTIVE = "Activa"
     RESERVED = "Reservada"

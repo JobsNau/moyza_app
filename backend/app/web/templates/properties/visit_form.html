@@ -74,12 +74,26 @@ Registrar visita
                 Teléfono
             </label>
 
-            <input
-                type="text"
-                name="phone"
-                placeholder="Teléfono de contacto"
-                class="w-full border border-gray-300 p-2 sm:p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-200 text-sm sm:text-base"
-            >
+            <div class="flex gap-2">
+
+                <select
+                    name="phone_country_code"
+                    class="phone-country-select border border-gray-300 p-2 sm:p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-200 text-sm sm:text-base flex-shrink-0"
+                >
+                {% for code, flag, label in phone_countries %}
+                    <option value="{{ code }}" data-full="{{ label }}" data-short="+{{ code }}" {% if code == default_country_code %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+                </select>
+
+                <input
+                    type="tel"
+                    name="phone_number"
+                    placeholder="Teléfono de contacto"
+                    required
+                    class="w-full border border-gray-300 p-2 sm:p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-200 text-sm sm:text-base"
+                >
+
+            </div>
 
         </div>
 
@@ -95,6 +109,27 @@ Registrar visita
                 placeholder="correo@ejemplo.com"
                 class="w-full border border-gray-300 p-2 sm:p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-200 text-sm sm:text-base"
             >
+
+        </div>
+
+        <div>
+
+            <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
+                Honorarios en caso de compra
+            </label>
+
+            <div class="relative">
+                <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2 sm:pl-3 text-gray-500 text-sm sm:text-base">
+                    €
+                </span>
+                <input
+                    type="text"
+                    name="purchase_fees"
+                    placeholder="Ej: 2500 + IVA"
+                    required
+                    class="w-full border border-gray-300 p-2 sm:p-3 pl-6 sm:pl-7 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-200 text-sm sm:text-base"
+                >
+            </div>
 
         </div>
 
@@ -220,6 +255,7 @@ Registrar visita
         <textarea
             name="notes"
             rows="4"
+            required
             class="border border-gray-300 p-2 sm:p-3 rounded-xl sm:col-span-2 focus:outline-none focus:ring-2 focus:ring-gray-200 text-sm sm:text-base"
             placeholder="Observaciones"
         ></textarea>
@@ -250,5 +286,24 @@ Registrar visita
     </form>
 
 </div>
+
+<script>
+document.querySelectorAll('.phone-country-select').forEach(function (select) {
+    function shorten() {
+        var opt = select.options[select.selectedIndex];
+        if (opt) opt.textContent = opt.dataset.short;
+    }
+    function expand() {
+        Array.prototype.forEach.call(select.options, function (opt) {
+            opt.textContent = opt.dataset.full;
+        });
+    }
+    shorten();
+    select.addEventListener('mousedown', expand);
+    select.addEventListener('focus', expand);
+    select.addEventListener('change', shorten);
+    select.addEventListener('blur', shorten);
+});
+</script>
 
 {% endblock %}

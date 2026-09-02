@@ -76,7 +76,7 @@ Vista Previa del Documento - Visita
             </tr>
             <tr class="border-b">
                 <td class="py-2 font-semibold">Teléfono de contacto:</td>
-                <td class="py-2">{{ visit.phone or 'No especificado' }}</td>
+                <td class="py-2">{{ '+' + visit.phone if visit.phone else 'No especificado' }}</td>
             </tr>
             <tr>
                 <td class="py-2 font-semibold">E-mail:</td>
@@ -101,7 +101,7 @@ Vista Previa del Documento - Visita
             </tr>
             <tr>
                 <td class="py-2 font-semibold">Honorarios en caso de compra:</td>
-                <td class="py-2">Según condiciones establecidas</td>
+                <td class="py-2">{{ '€' + visit.purchase_fees if visit.purchase_fees else 'Según condiciones establecidas' }}</td>
             </tr>
         </table>
     </div>

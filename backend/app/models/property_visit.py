@@ -49,6 +49,11 @@ class PropertyVisit(Base):
         nullable=True
     )
 
+    purchase_fees = Column(
+        String,
+        nullable=True
+    )
+
     interest_level = Column(
         Integer,
         nullable=True

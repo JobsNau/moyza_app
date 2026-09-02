@@ -22,6 +22,7 @@ from app.services.whatsapp import send_report
 from app.core.config import settings
 from app.web.utils.flash import set_flash
 from app.web.dependencies.auth import is_admin, get_agent_from_user
+from app.core.constants import PhoneCountryCodes
 
 
 router = APIRouter()
@@ -117,7 +118,9 @@ async def new_visit(
         context={
             "request": request,
             "property": property_item,
-            "current_user": request.state.user
+            "current_user": request.state.user,
+            "phone_countries": PhoneCountryCodes.choices(),
+            "default_country_code": PhoneCountryCodes.DEFAULT
         }
     )
 
@@ -142,14 +145,28 @@ async def create_visit(
 
     generate_sheet = form.get("generate_sheet") == "true"
 
+    phone_country_code = (form.get("phone_country_code") or PhoneCountryCodes.DEFAULT).strip()
+    phone_number_digits = "".join(ch for ch in (form.get("phone_number") or "") if ch.isdigit())
+    phone = f"{phone_country_code}{phone_number_digits}" if phone_number_digits else ""
+
+    visitor_name = (form.get("visitor_name") or "").strip()
+    purchase_fees = (form.get("purchase_fees") or "").strip()
+    notes = (form.get("notes") or "").strip()
+
+    if not visitor_name or not phone or not purchase_fees or not notes:
+        response = RedirectResponse(url=f"/visits/new/{property_id}", status_code=302)
+        set_flash(response, "error", "Nombre, teléfono, honorarios y observaciones son obligatorios")
+        return response
+
     try:
         # Crear visita en estado 'draft' para seguir el nuevo flujo legal
         visit = PropertyVisit(
             property_id=property_id,
-            visitor_name=form.get("visitor_name"),
+            visitor_name=visitor_name,
             dni=form.get("dni"),
-            phone=form.get("phone"),
+            phone=phone,
             email=form.get("email"),
+            purchase_fees=purchase_fees,
             interest_level=interest_level,
             price_feedback=form.get("price_feedback"),
             location_feedback=form.get("location_feedback"),
@@ -157,7 +174,7 @@ async def create_visit(
             lighting_feedback=form.get("lighting_feedback"),
             elevator_feedback=form.get("elevator_feedback"),
             garage_feedback=form.get("garage_feedback"),
-            notes=form.get("notes"),
+            notes=notes,
             created_by=request.state.user.id,
             visit_status='draft'  # Nuevo flujo: inicia en draft
         )
@@ -286,17 +303,18 @@ async def send_visit_sheet_whatsapp(
         except Exception:
             logger.exception("Error enviando ficha al comprador: %s", visit.phone)
 
-    if property_item.agent and property_item.agent.phone:
-        try:
-            send_report(
-                phone=property_item.agent.phone,
-                file_url=file_url,
-                caption=f"Ficha de visita - {property_item.title}"
-            )
-            sent_to.append("agente")
-            logger.info("Ficha enviada al agente: %s", property_item.agent.phone)
-        except Exception:
-            logger.exception("Error enviando ficha al agente: %s", property_item.agent.phone)
+    # # Envio al numero del agente
+    # if property_item.agent and property_item.agent.phone:
+    #     try:
+    #         send_report(
+    #             phone=property_item.agent.phone,
+    #             file_url=file_url,
+    #             caption=f"Ficha de visita - {property_item.title}"
+    #         )
+    #         sent_to.append("agente")
+    #         logger.info("Ficha enviada al agente: %s", property_item.agent.phone)
+    #     except Exception:
+    #         logger.exception("Error enviando ficha al agente: %s", property_item.agent.phone)
 
     if sent_to:
         response = RedirectResponse(url=redirect_url, status_code=302)
@@ -489,13 +507,18 @@ async def edit_visit(
         set_flash(response, "error", "Visita no encontrada")
         return response
 
+    phone_country_code, phone_local_number = PhoneCountryCodes.split(visit.phone)
+
     return templates.TemplateResponse(
         request=request,
         name="visits/edit_form.html",
         context={
             "request": request,
             "visit": visit,
-            "current_user": request.state.user
+            "current_user": request.state.user,
+            "phone_countries": PhoneCountryCodes.choices(),
+            "phone_country_code": phone_country_code,
+            "phone_local_number": phone_local_number
         }
     )
 
@@ -528,11 +551,25 @@ async def update_visit(
     # Guardar si tenía PDF antes de actualizar
     had_pdf = visit.visit_sheet_filepath is not None
 
+    phone_country_code = (form.get("phone_country_code") or PhoneCountryCodes.DEFAULT).strip()
+    phone_number_digits = "".join(ch for ch in (form.get("phone_number") or "") if ch.isdigit())
+    phone = f"{phone_country_code}{phone_number_digits}" if phone_number_digits else ""
+
+    visitor_name = (form.get("visitor_name") or "").strip()
+    purchase_fees = (form.get("purchase_fees") or "").strip()
+    notes = (form.get("notes") or "").strip()
+
+    if not visitor_name or not phone or not purchase_fees or not notes:
+        response = RedirectResponse(url=f"/visits/edit/{visit_id}", status_code=302)
+        set_flash(response, "error", "Nombre, teléfono, honorarios y observaciones son obligatorios")
+        return response
+
     try:
-        visit.visitor_name = form.get("visitor_name")
+        visit.visitor_name = visitor_name
         visit.dni = form.get("dni") or None
-        visit.phone = form.get("phone") or None
+        visit.phone = phone
         visit.email = form.get("email") or None
+        visit.purchase_fees = purchase_fees
         visit.interest_level = interest_level
         visit.price_feedback = form.get("price_feedback") or None
         visit.location_feedback = form.get("location_feedback") or None
@@ -540,7 +577,7 @@ async def update_visit(
         visit.lighting_feedback = form.get("lighting_feedback") or None
         visit.elevator_feedback = form.get("elevator_feedback") or None
         visit.garage_feedback = form.get("garage_feedback") or None
-        visit.notes = form.get("notes") or None
+        visit.notes = notes
 
         db.commit()
 

@@ -349,6 +349,14 @@
                     Compradores
                 </h2>
                 <span class="bg-gray-200 text-gray-700 text-xs px-2 py-0.5 rounded-full font-medium">{{ buyers|length }}</span>
+                {% for business_type, count in buyer_operation_counts.items() %}
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                    {% if business_type == 'Venta' %}bg-green-100 text-green-800
+                    {% elif business_type == 'Alquiler' %}bg-purple-100 text-purple-800
+                    {% else %}bg-gray-100 text-gray-700{% endif %}">
+                    {{ count }} {{ business_type }}
+                </span>
+                {% endfor %}
             </div>
             <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
                 <div class="overflow-x-auto max-h-[400px] overflow-y-auto">
@@ -406,7 +414,11 @@
                                             <svg class="w-10 h-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                             </svg>
+                                            {% if request.state.user.role.name.lower() == 'admin' %}
                                             <p>No hay compradores registrados</p>
+                                            {% else %}
+                                            <p>Aún no hay compradores en seguimiento. Aparecerán aquí a medida que abras y gestiones sus alertas.</p>
+                                            {% endif %}
                                             {% if request.state.user.role.name.lower() == 'admin' %}
                                             <button onclick="openCreateBuyerModal()"
                                                 class="text-blue-600 hover:underline text-sm">Crear el primero</button>
@@ -615,7 +627,6 @@
                             <option value="">Sin especificar</option>
                             <option value="Venta">Venta</option>
                             <option value="Alquiler">Alquiler</option>
-                            <option value="Ambas">Ambas</option>
                         </select>
                     </div>
                     <div>

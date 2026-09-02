@@ -178,31 +178,57 @@ async def alerts_page(
     if is_admin(current_user):
         agents = db.query(Agent).all()
 
-    # Lista de compradores: admin ve todos; agente solo los suyos
+    # Lista de compradores: el admin ve siempre el listado completo. Para el
+    # agente, en cambio, solo aparecen los compradores cuyas alertas ya
+    # iniciaron seguimiento (status distinto de PENDING), así la lista se va
+    # llenando a medida que va gestionando sus alertas.
     if is_admin(current_user):
         buyers = db.query(Buyer).order_by(Buyer.name.asc()).all()
     else:
         agent = get_agent_from_user(current_user, db)
         if agent:
-            buyers_via_criteria = (
-                db.query(Buyer.id)
-                .join(BuyerSearchCriteria, BuyerSearchCriteria.buyer_id == Buyer.id)
-                .filter(BuyerSearchCriteria.agent_id == agent.id)
+            started_buyer_ids = (
+                db.query(PropertyAlert.buyer_id)
+                .filter(
+                    PropertyAlert.buyer_id.isnot(None),
+                    PropertyAlert.status != AlertStatus.PENDING,
+                    PropertyAlert.agent_id == agent.id,
+                )
+                .subquery()
             )
-            buyers_via_alerts = (
-                db.query(Buyer.id)
-                .join(PropertyAlert, PropertyAlert.buyer_id == Buyer.id)
-                .filter(PropertyAlert.agent_id == agent.id)
-            )
-            buyer_ids = buyers_via_criteria.union(buyers_via_alerts).subquery()
             buyers = (
                 db.query(Buyer)
-                .filter(Buyer.id.in_(buyer_ids))
+                .filter(Buyer.id.in_(started_buyer_ids))
                 .order_by(Buyer.name.asc())
                 .all()
             )
         else:
             buyers = []
+
+    # Conteo por tipo de operación de los compradores que efectivamente
+    # aparecen en `buyers` (no del total de alertas del sistema), para que el
+    # desglose "N Alquiler, N Venta" cuadre con la lista mostrada. Para el
+    # admin cuentan todas sus alertas; para el agente, solo las que ya
+    # iniciaron seguimiento y son suyas (mismo criterio con el que se armó
+    # `buyers` arriba).
+    buyer_operation_counts = {}
+    admin_view = is_admin(current_user)
+    for buyer in buyers:
+        for buyer_alert in buyer.alerts:
+            if not buyer_alert.business_type:
+                continue
+            if admin_view:
+                counted = True
+            else:
+                counted = (
+                    buyer_alert.status != AlertStatus.PENDING
+                    and agent
+                    and buyer_alert.agent_id == agent.id
+                )
+            if counted:
+                buyer_operation_counts[buyer_alert.business_type] = (
+                    buyer_operation_counts.get(buyer_alert.business_type, 0) + 1
+                )
 
     # Valores para selectores del modal de criteria
     zones = [
@@ -261,6 +287,7 @@ async def alerts_page(
             "request": request,
             "alerts": alerts,
             "buyers": buyers,
+            "buyer_operation_counts": buyer_operation_counts,
             "current_user": current_user,
             "pending_count": pending_count,
             "in_progress_count": in_progress_count,

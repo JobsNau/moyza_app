@@ -1,0 +1,175 @@
+<div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+
+    <div class="p-3 sm:p-4 border-b border-gray-200 bg-white">
+
+        <form method="GET" action="/properties" class="flex items-center gap-3">
+
+            <input type="hidden" name="tab" value="others">
+
+            <input
+                type="text"
+                name="search"
+                placeholder="Buscar por título, dirección, ciudad o referencia..."
+                value="{{ search or '' }}"
+                class="w-full border border-gray-300 rounded-xl p-2 sm:p-3 focus:outline-none focus:ring-2 focus:ring-gray-200 text-sm sm:text-base"
+            >
+
+            {% if search %}
+
+            <a
+                href="/properties?tab=others"
+                class="text-xs sm:text-sm text-gray-500 hover:text-gray-800 whitespace-nowrap"
+            >
+                Limpiar
+            </a>
+
+            {% endif %}
+
+        </form>
+
+    </div>
+
+    <!-- Scroll horizontal en móvil y vertical cuando hay muchas propiedades -->
+    <div class="overflow-x-auto overflow-y-auto max-h-[60vh] -mx-px">
+
+    <table class="w-full min-w-[800px]">
+
+        <thead class="bg-gray-50 border-b border-gray-200">
+
+            <tr>
+
+                <th class="sticky top-0 z-10 bg-gray-50 px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-600 whitespace-nowrap">
+                    Propiedad
+                </th>
+
+                <th class="sticky top-0 z-10 bg-gray-50 px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-600 whitespace-nowrap">
+                    Ciudad / Zona
+                </th>
+
+                <th class="sticky top-0 z-10 bg-gray-50 px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-600 whitespace-nowrap">
+                    Tipo
+                </th>
+
+                <th class="sticky top-0 z-10 bg-gray-50 px-3 sm:px-6 py-3 sm:py-4 text-center text-xs sm:text-sm font-semibold text-gray-600 whitespace-nowrap">
+                    Operación
+                </th>
+
+                <th class="sticky top-0 z-10 bg-gray-50 px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-600 whitespace-nowrap">
+                    Valor
+                </th>
+
+                <th class="sticky top-0 z-10 bg-gray-50 px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-600 whitespace-nowrap">
+                    Características
+                </th>
+
+                <th class="sticky top-0 z-10 bg-gray-50 px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-600 whitespace-nowrap">
+                    Estado
+                </th>
+
+                <th class="sticky top-0 z-10 bg-gray-50 px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-600 whitespace-nowrap">
+                    Agente asignado
+                </th>
+
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+            {% for property in other_properties %}
+
+            <tr class="border-b border-gray-100 hover:bg-gray-50">
+
+                <td class="px-3 sm:px-6 py-3 sm:py-4 text-sm">
+                    <div class="flex flex-col">
+                        <span class="font-medium">{{ property.title }}</span>
+                        <span class="text-xs text-gray-500">{{ property.address or '-' }}</span>
+                    </div>
+                </td>
+
+                <td class="px-3 sm:px-6 py-3 sm:py-4 text-sm">
+                    {{ property.city or '-' }}{% if property.zona %} / {{ property.zona }}{% endif %}
+                </td>
+
+                <td class="px-3 sm:px-6 py-3 sm:py-4 text-sm">
+                    {{ property.property_type or '-' }}
+                </td>
+
+                <td class="px-3 sm:px-6 py-3 sm:py-4 text-center">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                        {% if property.business_type == 'Venta' %}bg-green-100 text-green-800
+                        {% elif property.business_type == 'Alquiler' %}bg-purple-100 text-purple-800
+                        {% else %}bg-gray-100 text-gray-700{% endif %}">
+                        {{ property.business_type or '-' }}
+                    </span>
+                </td>
+
+                <td class="px-3 sm:px-6 py-3 sm:py-4 text-sm whitespace-nowrap">
+                    {% if property.price is not none %}
+                        {{ property.moneda or '' }} {{ "{:,.0f}".format(property.price) }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+
+                <td class="px-3 sm:px-6 py-3 sm:py-4 text-sm text-gray-600 whitespace-nowrap">
+                    {% if property.m2_construidos is not none %}{{ property.m2_construidos|int }} m²{% endif %}
+                    {% if property.num_dormitorios is not none %} · {{ property.num_dormitorios }} hab{% endif %}
+                    {% if property.num_banos_aseos is not none %} · {{ property.num_banos_aseos }} baños{% endif %}
+                    {% if property.m2_construidos is none and property.num_dormitorios is none and property.num_banos_aseos is none %}-{% endif %}
+                </td>
+
+                <td class="px-3 sm:px-6 py-3 sm:py-4">
+                    <span class="
+                        px-3 py-1 rounded-full text-sm
+
+                        {% if property.status == 'Activa' %}
+                            bg-green-100 text-green-700
+
+                        {% elif property.status == 'Pausada' %}
+                            bg-yellow-100 text-yellow-700
+
+                        {% elif property.status == 'Vendida' %}
+                            bg-red-100 text-red-700
+
+                        {% else %}
+                            bg-gray-100 text-gray-700
+                        {% endif %}
+                    ">
+                        {{ property.status }}
+                    </span>
+                </td>
+
+                <td class="px-3 sm:px-6 py-3 sm:py-4 text-sm text-gray-600">
+                    {{ property.agent_name or 'Sin asignar' }}
+                </td>
+
+            </tr>
+
+            {% endfor %}
+
+            {% if not other_properties %}
+
+            <tr>
+
+                <td colspan="8" class="px-3 sm:px-6 py-8 text-center text-xs sm:text-sm text-gray-500">
+
+                    {% if search %}
+                    No se encontraron propiedades para "{{ search }}"
+                    {% else %}
+                    No hay más propiedades activas en el inventario de la empresa
+                    {% endif %}
+
+                </td>
+
+            </tr>
+
+            {% endif %}
+
+        </tbody>
+
+    </table>
+
+    </div>
+
+</div>

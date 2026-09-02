@@ -1,0 +1,122 @@
+<div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+
+    <table class="w-full">
+
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="px-6 py-4 text-left">ID</th>
+                <th class="px-6 py-4 text-left">Visita</th>
+                <th class="px-6 py-4 text-left">Destinatario</th>
+                <th class="px-6 py-4 text-left">Origen</th>
+                <th class="px-6 py-4 text-left">Estado</th>
+                <th class="px-6 py-4 text-left">Detalle</th>
+                <th class="px-6 py-4 text-left">Fecha</th>
+            </tr>
+        </thead>
+
+        <tbody>
+
+            {% if visit_whatsapp_logs %}
+                {% for log in visit_whatsapp_logs %}
+
+                <tr class="border-b border-gray-100 hover:bg-gray-50">
+
+                    <td class="px-6 py-4 text-sm text-gray-600">
+                        #{{ log.id }}
+                    </td>
+
+                    <td class="px-6 py-4">
+                        {% if log.property %}
+                        <a
+                            href="/properties/{{ log.property_id }}"
+                            class="font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                            {{ log.property.title }}
+                        </a>
+                        {% else %}
+                        <span class="font-medium text-gray-900">Visita #{{ log.visit_id }}</span>
+                        {% endif %}
+                        <div class="text-xs text-gray-400">Visita #{{ log.visit_id }}</div>
+                    </td>
+
+                    <td class="px-6 py-4 text-sm text-gray-700">
+                        <div class="font-medium text-gray-900 capitalize">{{ log.recipient_type }}</div>
+                        <div class="text-xs text-gray-400">
+                            {{ log.recipient_name or '—' }}{% if log.recipient_phone %} · +{{ log.recipient_phone }}{% endif %}
+                        </div>
+                    </td>
+
+                    <td class="px-6 py-4 text-sm text-gray-600">
+                        {% if log.trigger == 'finalize' %}
+                            Automático (al firmar)
+                        {% elif log.trigger == 'manual_resend' %}
+                            Reenvío manual
+                        {% else %}
+                            {{ log.trigger }}
+                        {% endif %}
+                    </td>
+
+                    <td class="px-6 py-4">
+                        {% if log.status == 'SENT' %}
+                        <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium">
+                            Enviado
+                        </span>
+                        {% elif log.status == 'SKIPPED' %}
+                        <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium">
+                            Omitido
+                        </span>
+                        {% elif log.status == 'ERROR' %}
+                        <span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-medium">
+                            Error
+                        </span>
+                        {% else %}
+                        <span class="bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-xs font-medium">
+                            {{ log.status }}
+                        </span>
+                        {% endif %}
+                    </td>
+
+                    <td class="px-6 py-4 text-sm text-gray-500">
+                        {% if log.error_message %}
+                        <button
+                            onclick="alert('{{ log.error_message | replace("'", "\\'") }}')"
+                            class="bg-red-100 text-red-600 px-3 py-1 rounded-lg text-xs hover:bg-red-200"
+                        >
+                            Ver error
+                        </button>
+                        {% elif log.duration_ms %}
+                            {{ log.duration_ms }} ms
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+
+                    <td class="px-6 py-4 text-sm text-gray-600">
+                        {{ log.attempted_at | madrid_dt('%Y-%m-%d %H:%M') if log.attempted_at else '-' }}
+                    </td>
+
+                </tr>
+
+                {% endfor %}
+
+            {% else %}
+
+                <tr>
+                    <td colspan="7" class="px-6 py-12 text-center text-gray-500">
+                        <div class="flex flex-col items-center gap-3">
+                            <svg class="w-16 h-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                            </svg>
+                            <p class="text-lg font-medium">No hay envíos de fichas de visita registrados aún</p>
+                            <p class="text-sm">Los registros aparecerán cuando se finalice o reenvíe una ficha de visita por WhatsApp</p>
+                        </div>
+                    </td>
+                </tr>
+
+            {% endif %}
+
+        </tbody>
+
+    </table>
+
+</div>

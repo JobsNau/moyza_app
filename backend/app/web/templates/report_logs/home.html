@@ -42,6 +42,13 @@ Logs de Auditoría
     >
         Recordatorios de Compradores
     </a>
+    <a
+        href="/report-logs?tab=visit_whatsapp"
+        class="px-5 py-3 text-sm font-medium rounded-t-lg transition-colors
+               {% if active_tab == 'visit_whatsapp' %}bg-white border border-b-white border-gray-200 text-gray-900 -mb-px{% else %}text-gray-500 hover:text-gray-700{% endif %}"
+    >
+        Fichas de Visita (WhatsApp)
+    </a>
 </div>
 
 {# ── Contenido por tab ── #}
@@ -55,6 +62,11 @@ Logs de Auditoría
 
     {% include 'report_logs/reminder_filters.html' %}
     {% include 'report_logs/reminder_table.html' %}
+
+{% elif active_tab == 'visit_whatsapp' %}
+
+    {% include 'report_logs/visit_whatsapp_filters.html' %}
+    {% include 'report_logs/visit_whatsapp_table.html' %}
 
 {% endif %}
 

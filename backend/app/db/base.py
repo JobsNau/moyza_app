@@ -15,6 +15,7 @@ from app.models.property_status_history import PropertyStatusHistory
 from app.models.property_visit import PropertyVisit
 from app.models.visit_audit_log import VisitAuditLog
 from app.models.visit_otp_verification import VisitOTPVerification
+from app.models.visit_whatsapp_log import VisitWhatsappLog
 from app.models.report_job_log import ReportJobLog
 from app.models.ai_analysis_log import AIAnalysisLog
 from app.models.property_alert import PropertyAlert

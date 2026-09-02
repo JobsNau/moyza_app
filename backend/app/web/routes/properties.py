@@ -5,6 +5,7 @@ from fastapi import APIRouter
 from fastapi import Request
 from fastapi import Depends
 from fastapi import Form
+from fastapi import Query
 
 from fastapi.responses import HTMLResponse
 from fastapi.responses import RedirectResponse
@@ -135,6 +136,7 @@ def _build_change_logs(property_obj, new_values: dict, user_id: int, db) -> list
 @router.get("/properties", response_class=HTMLResponse)
 async def properties_page(
     request: Request,
+    tab: str = Query(default="mine"),
     db: Session = Depends(get_db)
 ):
 
@@ -144,12 +146,19 @@ async def properties_page(
     can_create = is_admin(current_user)
     can_delete = can_create
 
+    admin_view = is_admin(current_user)
+    agent = None if admin_view else get_agent_from_user(current_user, db)
+
+    # La pestaña "Resto de propiedades" solo aplica a agentes: el admin ya ve
+    # el inventario completo en "Mis propiedades".
+    show_others_tab = not admin_view and agent is not None
+    tab = "others" if (tab == "others" and show_others_tab) else "mine"
+
     # Si es admin, mostrar todas las propiedades
     # Si es agente, mostrar solo sus propiedades
     base_query = db.query(Property).filter(Property.status != PropertyStatus.ARCHIVED)
 
-    if not is_admin(current_user):
-        agent = get_agent_from_user(current_user, db)
+    if not admin_view:
         if agent:
             base_query = base_query.filter(Property.agent_id == agent.id)
         else:
@@ -193,6 +202,59 @@ async def properties_page(
     )
     properties = filtered_query.order_by(numeric_title.desc().nullslast()).all()
 
+    # "Resto de propiedades": inventario activo de la empresa que NO está
+    # asociado al agente logueado. Se construye con `with_entities` sobre
+    # columnas explícitas (sin `Property.client`/`client_id`) para que el
+    # objeto de propietario ni siquiera se cargue desde el backend, en vez de
+    # depender de que la plantilla simplemente no lo muestre.
+    other_properties = []
+    other_count = 0
+
+    if show_others_tab:
+        others_base = db.query(Property).filter(
+            Property.status == PropertyStatus.ACTIVE,
+            or_(Property.agent_id != agent.id, Property.agent_id.is_(None)),
+        )
+        other_count = others_base.count()
+
+        if tab == "others":
+            others_query = others_base.outerjoin(Agent, Agent.id == Property.agent_id)
+
+            if search:
+                pattern = f"%{search}%"
+                others_query = others_query.filter(
+                    or_(
+                        Property.title.ilike(pattern),
+                        Property.address.ilike(pattern),
+                        Property.city.ilike(pattern),
+                        Property.referencia.ilike(pattern),
+                    )
+                )
+
+            rows = (
+                others_query
+                .with_entities(
+                    Property.id,
+                    Property.title,
+                    Property.address,
+                    Property.city,
+                    Property.zona,
+                    Property.property_type,
+                    Property.business_type,
+                    Property.price,
+                    Property.moneda,
+                    Property.status,
+                    Property.m2_utiles,
+                    Property.m2_construidos,
+                    Property.num_dormitorios,
+                    Property.num_banos_aseos,
+                    Agent.name.label("agent_name"),
+                )
+                .order_by(Property.title.asc())
+                .all()
+            )
+            other_properties = [dict(row._mapping) for row in rows]
+
     return templates.TemplateResponse(
         request=request,
         name="properties/home.html",
@@ -207,7 +269,11 @@ async def properties_page(
             "sold_count": sold_count,
             "search": search,
             "can_create": can_create,
-            "can_delete": can_delete
+            "can_delete": can_delete,
+            "tab": tab,
+            "show_others_tab": show_others_tab,
+            "other_properties": other_properties,
+            "other_count": other_count,
         }
     )
 

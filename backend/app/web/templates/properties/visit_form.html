@@ -261,14 +261,14 @@ Registrar visita
         ></textarea>
 
         <div class="sm:col-span-2">
-            <label class="flex items-start gap-2 cursor-pointer">
+            <label class="flex items-start gap-2">
                 <input
                     type="checkbox"
-                    name="generate_sheet"
-                    value="true"
                     checked
+                    disabled
                     class="mt-1 w-4 h-4 sm:w-5 sm:h-5 rounded border-gray-300 flex-shrink-0"
                 >
+                <input type="hidden" name="generate_sheet" value="true">
                 <span class="text-xs sm:text-sm text-gray-700">
                     Generar y enviar ficha de visita por WhatsApp al comprador y agente
                 </span>

@@ -303,17 +303,18 @@ async def send_visit_sheet_whatsapp(
         except Exception:
             logger.exception("Error enviando ficha al comprador: %s", visit.phone)
 
-    if property_item.agent and property_item.agent.phone:
-        try:
-            send_report(
-                phone=property_item.agent.phone,
-                file_url=file_url,
-                caption=f"Ficha de visita - {property_item.title}"
-            )
-            sent_to.append("agente")
-            logger.info("Ficha enviada al agente: %s", property_item.agent.phone)
-        except Exception:
-            logger.exception("Error enviando ficha al agente: %s", property_item.agent.phone)
+    # # Envio al numero del agente
+    # if property_item.agent and property_item.agent.phone:
+    #     try:
+    #         send_report(
+    #             phone=property_item.agent.phone,
+    #             file_url=file_url,
+    #             caption=f"Ficha de visita - {property_item.title}"
+    #         )
+    #         sent_to.append("agente")
+    #         logger.info("Ficha enviada al agente: %s", property_item.agent.phone)
+    #     except Exception:
+    #         logger.exception("Error enviando ficha al agente: %s", property_item.agent.phone)
 
     if sent_to:
         response = RedirectResponse(url=redirect_url, status_code=302)

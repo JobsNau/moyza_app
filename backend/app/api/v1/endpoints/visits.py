@@ -270,17 +270,18 @@ async def finalize_visit(
             except Exception as e:
                 logger.exception(f"Error sending sheet to buyer: {visit.phone}")
 
-        if property_item.agent and property_item.agent.phone:
-            try:
-                send_report(
-                    phone=property_item.agent.phone,
-                    file_url=file_url,
-                    caption=f"Ficha de visita - {property_item.title}"
-                )
-                sent_to.append("agente")
-                logger.info(f"Sheet sent to agent: {property_item.agent.phone}")
-            except Exception as e:
-                logger.exception(f"Error sending sheet to agent: {property_item.agent.phone}")
+        # # Envio al numero del agente
+        # if property_item.agent and property_item.agent.phone:
+        #     try:
+        #         send_report(
+        #             phone=property_item.agent.phone,
+        #             file_url=file_url,
+        #             caption=f"Ficha de visita - {property_item.title}"
+        #         )
+        #         sent_to.append("agente")
+        #         logger.info(f"Sheet sent to agent: {property_item.agent.phone}")
+        #     except Exception as e:
+        #         logger.exception(f"Error sending sheet to agent: {property_item.agent.phone}")
 
         visit.visit_sheet_sent_to = ", ".join(sent_to) if sent_to else None
 

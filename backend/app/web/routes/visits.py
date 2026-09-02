@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime
 from pathlib import Path
+from time import perf_counter
 from uuid import uuid4
 
 from fastapi import APIRouter
@@ -23,6 +24,7 @@ from app.core.config import settings
 from app.web.utils.flash import set_flash
 from app.web.dependencies.auth import is_admin, get_agent_from_user
 from app.core.constants import PhoneCountryCodes
+from app.services.visit_whatsapp_log_service import log_whatsapp_attempt
 
 
 router = APIRouter()
@@ -291,7 +293,10 @@ async def send_visit_sheet_whatsapp(
 
     sent_to = []
 
+    triggered_by = request.state.user.id if request.state.user else None
+
     if visit.phone:
+        started_at = perf_counter()
         try:
             send_report(
                 phone=visit.phone,
@@ -300,8 +305,47 @@ async def send_visit_sheet_whatsapp(
             )
             sent_to.append("comprador")
             logger.info("Ficha enviada al comprador: %s", visit.phone)
-        except Exception:
+            log_whatsapp_attempt(
+                db=db,
+                visit_id=visit.id,
+                property_id=property_item.id,
+                recipient_type="comprador",
+                recipient_name=visit.visitor_name,
+                recipient_phone=visit.phone,
+                status="SENT",
+                trigger="manual_resend",
+                file_url=file_url,
+                duration_ms=int((perf_counter() - started_at) * 1000),
+                triggered_by=triggered_by
+            )
+        except Exception as e:
             logger.exception("Error enviando ficha al comprador: %s", visit.phone)
+            log_whatsapp_attempt(
+                db=db,
+                visit_id=visit.id,
+                property_id=property_item.id,
+                recipient_type="comprador",
+                recipient_name=visit.visitor_name,
+                recipient_phone=visit.phone,
+                status="ERROR",
+                trigger="manual_resend",
+                error_message=str(e),
+                file_url=file_url,
+                duration_ms=int((perf_counter() - started_at) * 1000),
+                triggered_by=triggered_by
+            )
+    else:
+        log_whatsapp_attempt(
+            db=db,
+            visit_id=visit.id,
+            property_id=property_item.id,
+            recipient_type="comprador",
+            recipient_name=visit.visitor_name,
+            status="SKIPPED",
+            trigger="manual_resend",
+            error_message="Visita sin teléfono registrado",
+            triggered_by=triggered_by
+        )
 
     # # Envio al numero del agente
     # if property_item.agent and property_item.agent.phone:

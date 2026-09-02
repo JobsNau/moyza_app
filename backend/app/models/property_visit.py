@@ -186,3 +186,4 @@ class PropertyVisit(Base):
     property = relationship("Property", back_populates="visits")
     audit_logs = relationship("VisitAuditLog", back_populates="visit", cascade="all, delete-orphan")
     otp_verifications = relationship("VisitOTPVerification", back_populates="visit", cascade="all, delete-orphan")
+    whatsapp_logs = relationship("VisitWhatsappLog", back_populates="visit", cascade="all, delete-orphan")

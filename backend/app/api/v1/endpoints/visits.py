@@ -26,6 +26,7 @@ from app.services.visit_audit_service import (
     get_client_ip,
     get_user_agent
 )
+from app.services.visit_whatsapp_log_service import log_whatsapp_attempt
 
 
 router = APIRouter()
@@ -191,6 +192,7 @@ async def finalize_visit(
     FASE 4 del flujo legal.
     """
     from pathlib import Path
+    from time import perf_counter
     from uuid import uuid4
     from app.services.visit_sheet_generator import generate_visit_sheet
     from app.services.whatsapp import send_report
@@ -259,6 +261,7 @@ async def finalize_visit(
         sent_to = []
 
         if visit.phone:
+            started_at = perf_counter()
             try:
                 send_report(
                     phone=visit.phone,
@@ -267,8 +270,44 @@ async def finalize_visit(
                 )
                 sent_to.append("comprador")
                 logger.info(f"Sheet sent to buyer: {visit.phone}")
+                log_whatsapp_attempt(
+                    db=db,
+                    visit_id=visit.id,
+                    property_id=property_item.id,
+                    recipient_type="comprador",
+                    recipient_name=visit.visitor_name,
+                    recipient_phone=visit.phone,
+                    status="SENT",
+                    trigger="finalize",
+                    file_url=file_url,
+                    duration_ms=int((perf_counter() - started_at) * 1000)
+                )
             except Exception as e:
                 logger.exception(f"Error sending sheet to buyer: {visit.phone}")
+                log_whatsapp_attempt(
+                    db=db,
+                    visit_id=visit.id,
+                    property_id=property_item.id,
+                    recipient_type="comprador",
+                    recipient_name=visit.visitor_name,
+                    recipient_phone=visit.phone,
+                    status="ERROR",
+                    trigger="finalize",
+                    error_message=str(e),
+                    file_url=file_url,
+                    duration_ms=int((perf_counter() - started_at) * 1000)
+                )
+        else:
+            log_whatsapp_attempt(
+                db=db,
+                visit_id=visit.id,
+                property_id=property_item.id,
+                recipient_type="comprador",
+                recipient_name=visit.visitor_name,
+                status="SKIPPED",
+                trigger="finalize",
+                error_message="Visita sin teléfono registrado"
+            )
 
         # # Envio al numero del agente
         # if property_item.agent and property_item.agent.phone:

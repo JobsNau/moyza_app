@@ -7,6 +7,7 @@ from typing import Optional
 from app.db.deps import get_db
 from app.models.alert_reminder_log import AlertReminderLog
 from app.models.report_job_log import ReportJobLog
+from app.models.visit_whatsapp_log import VisitWhatsappLog
 from app.models.property import Property
 from app.models.report import Report
 from app.services.report_job_service import ReportJobService
@@ -23,6 +24,7 @@ async def report_logs_page(
     property_id: Optional[int] = Query(None),
     limit: int = Query(50, ge=1, le=500),
     reminder_status: Optional[str] = Query(None),
+    visit_whatsapp_status: Optional[str] = Query(None),
     db: Session = Depends(get_db)
 ):
     query = db.query(ReportJobLog)
@@ -37,6 +39,11 @@ async def report_logs_page(
         reminder_query = reminder_query.filter(AlertReminderLog.status == reminder_status)
     reminder_logs = reminder_query.order_by(AlertReminderLog.executed_at.desc()).limit(limit).all()
 
+    visit_whatsapp_query = db.query(VisitWhatsappLog)
+    if visit_whatsapp_status:
+        visit_whatsapp_query = visit_whatsapp_query.filter(VisitWhatsappLog.status == visit_whatsapp_status)
+    visit_whatsapp_logs = visit_whatsapp_query.order_by(VisitWhatsappLog.attempted_at.desc()).limit(limit).all()
+
     properties = db.query(Property).filter(Property.auto_send_report == True).all()
 
     return templates.TemplateResponse(
@@ -46,11 +53,13 @@ async def report_logs_page(
             "request": request,
             "logs": logs,
             "reminder_logs": reminder_logs,
+            "visit_whatsapp_logs": visit_whatsapp_logs,
             "properties": properties,
             "current_user": request.state.user,
             "selected_status": status,
             "selected_property_id": property_id,
             "selected_reminder_status": reminder_status,
+            "selected_visit_whatsapp_status": visit_whatsapp_status,
             "active_tab": tab,
         }
     )
